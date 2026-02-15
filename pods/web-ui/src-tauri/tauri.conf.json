@@ -62,9 +62,10 @@
   "plugins": {
     "updater": {
       "active": true,
-      "pubkey": "REPLACE_WITH_YOUR_PUBLIC_KEY",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUwNDM5Mzk0NDg0Rjk5NjMKUldSam1VOUlsSk5ENEpzdEh4QUdVYWhjL2VsZ1VGNzdnVlViaDFlWXVwWXJaWjRBaWI1d015WGYK",
       "endpoints": [
-        "https://github.com/HypernovaLabs/hnl-pods-v2/releases/latest/download/latest.json"
+        "https://github.com/hypernovalabs/hnl-pods-v2/releases/latest/download/latest.json",
+        "https://github.com/ftejedordev/hnl-pods-v2/releases/latest/download/latest.json"
       ]
     }
   }
