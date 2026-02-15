@@ -444,10 +444,22 @@ fn check_and_verify_command(cmd_path: &PathBuf, cmd_name: &str, path_env: &str) 
     Some((cmd_path.clone(), version))
 }
 
+fn find_free_port() -> Result<u16, String> {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0")
+        .map_err(|e| format!("Failed to find free port: {}", e))?;
+    let port = listener.local_addr()
+        .map_err(|e| format!("Failed to get local addr: {}", e))?
+        .port();
+    drop(listener);
+    Ok(port)
+}
+
 pub struct AppState {
     database_manager: Mutex<DatabaseManager>,
     backend_manager: Mutex<BackendManager>,
     system_dependencies: SystemDependencies,
+    backend_port: u16,
+    mongo_port: u16,
 }
 
 #[tauri::command]
@@ -468,6 +480,11 @@ fn check_services_health(state: tauri::State<AppState>) -> Result<serde_json::Va
 #[tauri::command]
 fn get_system_dependencies(state: tauri::State<AppState>) -> SystemDependencies {
     state.system_dependencies.clone()
+}
+
+#[tauri::command]
+fn get_backend_port(state: tauri::State<AppState>) -> u16 {
+    state.backend_port
 }
 
 #[tauri::command]
@@ -621,7 +638,7 @@ pub fn run() {
       let skip_embedded_services = cfg!(debug_assertions) &&
         std::env::var("SKIP_EMBEDDED_SERVICES").unwrap_or_default() == "true";
 
-      let (db_manager, backend_manager, system_deps) = if skip_embedded_services {
+      let (db_manager, backend_manager, system_deps, mongo_port, backend_port) = if skip_embedded_services {
         log::info!("SKIP_EMBEDDED_SERVICES=true - Using external services for development");
         log::info!("Expected MongoDB at: mongodb://localhost:27017");
         log::info!("Expected Backend at: http://localhost:8000");
@@ -639,15 +656,14 @@ pub fn run() {
           }
         });
 
-        (DatabaseManager::new(&app.handle())?, BackendManager::new(), system_deps)
+        (DatabaseManager::new(&app.handle())?, BackendManager::new(), system_deps, 27017u16, 8000u16)
       } else {
         log::info!("Starting embedded database and backend services...");
 
-        // 🧹 CLEANUP: Matar procesos huérfanos de instalaciones previas o ejecuciones anteriores
+        // 🧹 CLEANUP: Matar procesos huérfanos por NOMBRE (no por puerto)
         log::info!("🧹 Limpiando procesos huérfanos antes de iniciar servicios...");
 
         if cfg!(target_os = "windows") {
-          // Windows: usar taskkill
           let _ = std::process::Command::new("taskkill")
             .args(&["/F", "/IM", "pods-backend.exe"])
             .output();
@@ -655,43 +671,28 @@ pub fn run() {
           let _ = std::process::Command::new("taskkill")
             .args(&["/F", "/IM", "mongod.exe"])
             .output();
-
-          // Matar procesos Node.js relacionados con MCP servers
-          let _ = std::process::Command::new("cmd")
-            .args(&["/C", "FOR /F \"tokens=5\" %a IN ('netstat -aon ^| findstr :27017 ^| findstr LISTENING') DO taskkill /F /PID %a 2>NUL"])
-            .output();
-
-          let _ = std::process::Command::new("cmd")
-            .args(&["/C", "FOR /F \"tokens=5\" %a IN ('netstat -aon ^| findstr :8000 ^| findstr LISTENING') DO taskkill /F /PID %a 2>NUL"])
-            .output();
         } else {
-          // Unix/macOS: usar pkill y lsof
           let _ = std::process::Command::new("pkill")
             .args(&["-9", "-f", "pods-backend"])
             .output();
 
-          let _ = std::process::Command::new("sh")
-            .arg("-c")
-            .arg("lsof -ti:27017 | xargs kill -9 2>/dev/null || true")
-            .output();
-
-          let _ = std::process::Command::new("sh")
-            .arg("-c")
-            .arg("lsof -ti:8000 | xargs kill -9 2>/dev/null || true")
-            .output();
-
           let _ = std::process::Command::new("pkill")
-            .args(&["-9", "-f", "mcp-server-"])
-            .output();
-          let _ = std::process::Command::new("pkill")
-            .args(&["-9", "-f", "bash-mcp"])
+            .args(&["-9", "mongod"])
             .output();
         }
 
         log::info!("✅ Limpieza de procesos completada");
 
-        // Esperar un momento para que los puertos se liberen
+        // Esperar un momento para que los procesos terminen
         std::thread::sleep(std::time::Duration::from_millis(500));
+
+        // Find free ports for MongoDB and Backend
+        let mongo_port = find_free_port()
+          .map_err(|e| format!("Failed to find free port for MongoDB: {}", e))?;
+        let backend_port = find_free_port()
+          .map_err(|e| format!("Failed to find free port for Backend: {}", e))?;
+
+        log::info!("Dynamic ports assigned - MongoDB: {}, Backend: {}", mongo_port, backend_port);
 
         // Validate system dependencies and get their paths
         log::info!("Validating system dependencies (Node.js, NPX, UV)...");
@@ -730,7 +731,7 @@ pub fn run() {
           .map_err(|e| format!("Failed to create database manager: {}", e))?;
 
         // Start MongoDB (includes waiting for it to be ready)
-        db_manager.start_mongodb(&app.handle())
+        db_manager.start_mongodb(&app.handle(), mongo_port)
           .map_err(|e| format!("Failed to start MongoDB: {}", e))?;
 
         // Initialize backend manager with detected system dependencies
@@ -739,8 +740,8 @@ pub fn run() {
         // Clone system_deps before moving into start_backend
         let system_deps_clone = system_deps.clone();
 
-        // Start backend with detected dependency paths
-        backend_manager.start_backend(&app.handle(), system_deps_clone)
+        // Start backend with detected dependency paths and dynamic ports
+        backend_manager.start_backend(&app.handle(), system_deps_clone, backend_port, mongo_port)
           .map_err(|e| format!("Failed to start backend: {}", e))?;
 
         // Wait for backend to be ready
@@ -748,7 +749,7 @@ pub fn run() {
 
         log::info!("All embedded services started successfully");
 
-        (db_manager, backend_manager, system_deps)
+        (db_manager, backend_manager, system_deps, mongo_port, backend_port)
       };
 
       // Store managers and dependencies in app state
@@ -756,6 +757,8 @@ pub fn run() {
         database_manager: Mutex::new(db_manager),
         backend_manager: Mutex::new(backend_manager),
         system_dependencies: system_deps,
+        backend_port,
+        mongo_port,
       });
 
       Ok(())
@@ -767,7 +770,7 @@ pub fn run() {
         api.prevent_close();
       }
     })
-    .invoke_handler(tauri::generate_handler![check_services_health, get_system_dependencies, shutdown_services])
+    .invoke_handler(tauri::generate_handler![check_services_health, get_system_dependencies, shutdown_services, get_backend_port])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

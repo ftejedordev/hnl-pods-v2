@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { invoke } from '@tauri-apps/api/core';
 import type { LoginCredentials, RegisterCredentials, AuthResponse, User } from '@/types/auth';
 
-const MCP_API_BASE_URL = import.meta.env.VITE_MCP_SERVER_URL || 'http://localhost:8000';
+const DEFAULT_API_URL = import.meta.env.VITE_MCP_SERVER_URL || 'http://localhost:8000';
 const RAG_API_BASE_URL = import.meta.env.VITE_RAG_API_URL || 'http://localhost:8001';
 
 
@@ -9,11 +10,28 @@ const RAG_API_BASE_URL = import.meta.env.VITE_RAG_API_URL || 'http://localhost:8
  * MCP API
  */
 export const mcp_api = axios.create({
-  baseURL: MCP_API_BASE_URL,
+  baseURL: DEFAULT_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+/**
+ * Initialize API base URL from Tauri backend port.
+ * In Tauri context, fetches the dynamic port assigned to the backend.
+ * In dev mode (no Tauri), falls back to the default URL.
+ */
+export async function initializeApiBaseUrl(): Promise<void> {
+  try {
+    const port = await invoke<number>('get_backend_port');
+    const url = `http://localhost:${port}`;
+    mcp_api.defaults.baseURL = url;
+    console.log(`API configured at ${url}`);
+  } catch {
+    // No Tauri context (dev mode) — use default
+    console.log(`API using default: ${DEFAULT_API_URL}`);
+  }
+}
 
 mcp_api.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth-token');

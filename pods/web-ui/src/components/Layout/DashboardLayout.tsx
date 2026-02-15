@@ -94,7 +94,7 @@ export function DashboardLayout({ children, noPadding = false, hideSidebar = fal
                   HNL Pods
                 </h1>
                 <Badge variant="outline" className="w-fit text-xs bg-primary/10 text-primary border-primary/30">
-                  v1.1.0
+                  v1.0.3
                 </Badge>
               </div>
               <SidebarTrigger className="h-6 w-6" />

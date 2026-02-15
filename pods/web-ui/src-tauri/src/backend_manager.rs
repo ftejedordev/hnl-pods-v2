@@ -6,16 +6,19 @@ use crate::get_user_shell_path;
 
 pub struct BackendManager {
     backend_process: Option<CommandChild>,
+    port: u16,
 }
 
 impl BackendManager {
     pub fn new() -> Self {
         BackendManager {
             backend_process: None,
+            port: 0,
         }
     }
 
-    pub fn start_backend(&mut self, app_handle: &tauri::AppHandle, system_deps: crate::SystemDependencies) -> Result<(), String> {
+    pub fn start_backend(&mut self, app_handle: &tauri::AppHandle, system_deps: crate::SystemDependencies, backend_port: u16, mongo_port: u16) -> Result<(), String> {
+        self.port = backend_port;
         // Get Chromium path for Playwright - platform-specific
         let chromium_subpath = if cfg!(target_os = "macos") {
             "chrome-mac/Chromium.app/Contents/MacOS/Chromium"
@@ -112,10 +115,10 @@ impl BackendManager {
             .shell()
             .sidecar("pods-backend")
             .map_err(|e| format!("Failed to create pods-backend sidecar: {}", e))?
-            .env("DB_URI_MONGO", "mongodb://localhost:27017/hypernova_pods")
+            .env("DB_URI_MONGO", &format!("mongodb://localhost:{}/hypernova_pods", mongo_port))
             .env("DB_URI_POSTGRES", "postgresql://postgres@localhost:5432/hypernova_vectordb")
             .env("JWT_SECRET_KEY", "hypernova_secret_key_2024_pods")
-            .env("PORT", "8000")
+            .env("PORT", &backend_port.to_string())
             .env("PATH", enhanced_path)
             .env("npm_config_cache", &npx_cache_dir)
             .env("NPM_CONFIG_PREFIX", &npx_cache_dir)
@@ -151,16 +154,16 @@ impl BackendManager {
         });
 
         self.backend_process = Some(child);
-        log::info!("Backend started on port 8000");
+        log::info!("Backend started on port {}", backend_port);
         Ok(())
     }
 
     pub fn check_backend_health(&self) -> bool {
         // Try to connect to backend HTTP endpoint
-        match std::net::TcpStream::connect("127.0.0.1:8000") {
+        match std::net::TcpStream::connect(format!("127.0.0.1:{}", self.port)) {
             Ok(_) => {
                 // Additional check: try HTTP request
-                match ureq::get("http://127.0.0.1:8000/health").call() {
+                match ureq::get(&format!("http://127.0.0.1:{}/health", self.port)).call() {
                     Ok(response) => response.status() == 200,
                     Err(_) => false,
                 }

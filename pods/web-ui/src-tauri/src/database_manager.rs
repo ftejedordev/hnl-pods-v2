@@ -10,6 +10,7 @@ use std::sync::{Arc, Mutex};
 pub struct DatabaseManager {
     mongo_process: Option<CommandChild>,
     data_dir: PathBuf,
+    port: u16,
 }
 
 impl DatabaseManager {
@@ -25,10 +26,12 @@ impl DatabaseManager {
         Ok(DatabaseManager {
             mongo_process: None,
             data_dir,
+            port: 0,
         })
     }
 
-    pub fn start_mongodb(&mut self, app_handle: &tauri::AppHandle) -> Result<(), String> {
+    pub fn start_mongodb(&mut self, app_handle: &tauri::AppHandle, port: u16) -> Result<(), String> {
+        self.port = port;
         let mongo_data_dir = self.data_dir.join("mongodb");
         log::info!("MongoDB data directory: {:?}", mongo_data_dir);
 
@@ -36,14 +39,15 @@ impl DatabaseManager {
         log::info!("MongoDB data directory created/verified");
 
         // Log the sidecar path for debugging
-        log::info!("Attempting to spawn mongod sidecar...");
+        log::info!("Attempting to spawn mongod sidecar on port {}...", port);
 
+        let port_str = port.to_string();
         let (mut rx, child) = app_handle
             .shell()
             .sidecar("mongod")
             .map_err(|e| format!("Failed to create mongod sidecar: {}", e))?
             .args(["--dbpath", mongo_data_dir.to_str().unwrap()])
-            .args(["--port", "27017"])
+            .args(["--port", &port_str])
             .args(["--bind_ip", "127.0.0.1"])
             .spawn()
             .map_err(|e| format!("Failed to start MongoDB: {}", e))?;
@@ -90,7 +94,7 @@ impl DatabaseManager {
 
         while start.elapsed() < timeout {
             if self.check_mongodb_health() {
-                log::info!("MongoDB is ready and accepting connections on port 27017");
+                log::info!("MongoDB is ready and accepting connections on port {}", self.port);
                 return Ok(());
             }
 
@@ -126,7 +130,7 @@ impl DatabaseManager {
 
     pub fn check_mongodb_health(&self) -> bool {
         // Simple TCP check on MongoDB port
-        std::net::TcpStream::connect("127.0.0.1:27017").is_ok()
+        std::net::TcpStream::connect(format!("127.0.0.1:{}", self.port)).is_ok()
     }
 
     pub fn shutdown(&mut self) {

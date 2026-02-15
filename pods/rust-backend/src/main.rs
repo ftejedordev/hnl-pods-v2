@@ -79,11 +79,13 @@ async fn main() {
         .with_state(state);
 
     // Bind and serve
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000")
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8000".to_string());
+    let bind_addr = format!("0.0.0.0:{}", port);
+    let listener = tokio::net::TcpListener::bind(&bind_addr)
         .await
-        .expect("Failed to bind to port 8000");
+        .expect(&format!("Failed to bind to {}", bind_addr));
 
-    tracing::info!("Server running on http://0.0.0.0:8000");
+    tracing::info!("Server running on http://{}", bind_addr);
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())

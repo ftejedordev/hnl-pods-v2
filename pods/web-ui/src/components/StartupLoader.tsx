@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { initializeApiBaseUrl } from '@/lib/api';
 
 interface ServiceHealth {
   mongodb: boolean;
@@ -31,8 +32,10 @@ export default function StartupLoader({ onReady }: StartupLoaderProps) {
         setServices(health);
 
         if (health.mongodb && health.backend) {
-          setStatus('Todos los servicios listos');
+          setStatus('Configurando conexión...');
           clearInterval(checkInterval);
+          await initializeApiBaseUrl();
+          setStatus('Todos los servicios listos');
           setTimeout(() => {
             onReady();
           }, 500);
