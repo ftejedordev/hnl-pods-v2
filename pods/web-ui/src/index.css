@@ -1,0 +1,208 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@100;200;300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Scrollbar styling */
+.scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-8) transparent;
+}
+
+.scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar::-webkit-scrollbar-track {
+  background: 0 0;
+}
+
+.scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--gray-8);
+  border-radius: 3px;
+}
+
+.scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--gray-9);
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 271.5 100% 37.91%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 271.5 100% 37.91%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 271.5 100% 37.91%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 271.5 100% 37.91%;
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 271.5 100% 37.91%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 271.5 100% 37.91%;
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 0 0% 95.9%;
+    --sidebar-primary: 271.5 100% 37.91%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 14.9%;
+    --sidebar-accent-foreground: 0 0% 95.9%;
+    --sidebar-border: 0 0% 14.9%;
+    --sidebar-ring: 271.5 100% 37.91%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    margin: 0;
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  .font-ibm-plex-mono {
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  }
+}
+
+/* React Flow dark mode fixes */
+.dark .react-flow__controls {
+  @apply bg-card border-border;
+}
+
+.dark .react-flow__controls-button {
+  @apply bg-card border-border text-foreground;
+}
+
+.dark .react-flow__controls-button:hover {
+  @apply bg-muted;
+}
+
+.dark .react-flow__controls-button svg {
+  @apply fill-foreground;
+}
+
+.dark .react-flow__background {
+  @apply bg-background;
+}
+
+/* Enhanced connection styles inspired by Langflow */
+.react-flow__edge-path {
+  stroke: #000000;
+  stroke-width: 2px;
+}
+
+.dark .react-flow__edge-path {
+  stroke: #ffffff;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke: #9333ea;
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 12px rgba(147, 51, 234, 0.8)) drop-shadow(0 0 24px rgba(147, 51, 234, 0.4));
+  animation: flow-glow 2s ease-in-out infinite alternate;
+  stroke-dasharray: 8 4;
+  stroke-dashoffset: 0;
+  animation: flow-glow 2s ease-in-out infinite alternate, flow-dash 2s linear infinite;
+}
+
+@keyframes flow-glow {
+  from {
+    filter: drop-shadow(0 0 8px rgba(147, 51, 234, 0.6)) drop-shadow(0 0 16px rgba(147, 51, 234, 0.3));
+  }
+  to {
+    filter: drop-shadow(0 0 16px rgba(147, 51, 234, 1)) drop-shadow(0 0 32px rgba(147, 51, 234, 0.6));
+  }
+}
+
+@keyframes flow-dash {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -12;
+  }
+}
+
+/* Connection handles with glow effect */
+.react-flow__handle {
+  width: 14px;
+  height: 14px;
+  background: transparent;
+  border: 2px solid #666666;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.dark .react-flow__handle {
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+}
+
+.react-flow__handle:hover {
+  border: 2px solid #9333ea;
+  box-shadow: 0 0 12px rgba(147, 51, 234, 0.6);
+}
+
+.react-flow__handle.connecting {
+  background: #9333ea;
+  border: 2px solid #9333ea;
+  box-shadow: 0 0 16px rgba(147, 51, 234, 0.8), 0 0 32px rgba(147, 51, 234, 0.4);
+}
+
+/* Subtle node glow for running state only */
+.node-running-glow {
+  box-shadow: 0 0 12px hsla(284, 79%, 50%, 0.4), 0 0 24px hsla(284, 79%, 50%, 0.2);
+}
+
+/* Enhanced shadows for dark mode */
+.dark .node-running-glow {
+  box-shadow: 0 0 16px hsla(284, 79%, 60%, 0.6), 0 0 32px hsla(284, 79%, 60%, 0.3);
+}

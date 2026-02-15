@@ -1,0 +1,61 @@
+[package]
+name = "pods-backend"
+version = "1.0.0"
+edition = "2021"
+
+[[bin]]
+name = "pods-backend"
+path = "src/main.rs"
+
+[lib]
+name = "pods_backend"
+path = "src/lib.rs"
+
+[dependencies]
+# Web framework
+axum = { version = "0.8", features = ["macros"] }
+axum-extra = { version = "0.10", features = ["typed-header"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+
+# Database - pin to 3.2 with rustls (avoid openssl on Windows)
+mongodb = { version = "=3.2.2", default-features = false, features = ["rustls-tls", "dns-resolver", "compat-3-0-0"] }
+bson = { version = "2.13", features = ["chrono-0_4"] }
+
+# Auth & Crypto
+jsonwebtoken = "9"
+bcrypt = "0.17"
+# fernet = "0.2"  # Requires openssl, implementing manually with pure-Rust crypto
+base64 = "0.22"
+aes = "0.8"
+cbc = "0.1"
+hmac = "0.12"
+sha2 = "0.10"
+getrandom = "0.3"
+
+# HTTP client - use rustls
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+which = "7"
+dotenvy = "0.15"
+futures = "0.3"
+tokio-stream = "0.1"
+async-stream = "0.3"
+
+# MCP SDK (official) - keep default features for macros/builders
+rmcp = { version = "0.15", features = ["client", "transport-child-process", "transport-streamable-http-client-reqwest"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

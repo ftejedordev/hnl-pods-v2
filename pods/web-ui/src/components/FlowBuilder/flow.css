@@ -1,0 +1,600 @@
+/* Flow Builder CSS */
+
+/* Custom CSS Variables for Flow Theme */
+:root {
+  --flow-primary: #8b5cf6;
+  --flow-magic: #a855f7;
+  --flow-success: #10b981;
+  --flow-danger: #ef4444;
+  --flow-warning: #f59e0b;
+  --flow-info: #3b82f6;
+  --flow-gray-1: #f9fafb;
+  --flow-gray-4: #e5e7eb;
+  --flow-gray-6: #d1d5db;
+  --flow-gray-11: #374151;
+  --flow-accent-secondary: #f3e8ff;
+
+  /* Glassmorphism variables */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: rgba(31, 38, 135, 0.15);
+}
+
+/* Dark mode custom properties */
+.dark {
+  --flow-gray-1: #1f2937;
+  --flow-gray-4: #4b5563;
+  --flow-gray-6: #6b7280;
+  --flow-gray-11: #f3f4f6;
+  --flow-accent-secondary: #312e81;
+
+  /* Dark mode glassmorphism */
+  --glass-bg: rgba(17, 24, 39, 0.7);
+  --glass-border: rgba(75, 85, 99, 0.3);
+  --glass-shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* Node running glow animation - enhanced */
+.node-running-glow {
+  box-shadow: 
+    0 0 0 1px var(--flow-primary),
+    0 0 20px rgba(139, 92, 246, 0.3),
+    0 4px 20px rgba(139, 92, 246, 0.2);
+  animation: pulse-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 
+      0 0 0 1px var(--flow-primary),
+      0 0 20px rgba(139, 92, 246, 0.3),
+      0 4px 20px rgba(139, 92, 246, 0.2);
+  }
+  100% {
+    box-shadow: 
+      0 0 0 1px var(--flow-primary),
+      0 0 30px rgba(139, 92, 246, 0.5),
+      0 6px 30px rgba(139, 92, 246, 0.3);
+  }
+}
+
+/* Flow handles enhanced styling - Fixed positioning */
+.flow-handle {
+  border: 2px solid var(--flow-gray-6) !important;
+  background: white !important;
+  transition: all 0.2s ease !important;
+  z-index: 10 !important;
+  opacity: 1 !important;
+}
+
+.flow-handle:hover {
+  border-color: var(--flow-primary) !important;
+  background-color: #faf5ff !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2) !important;
+  /* Removed transform scale to prevent edge drift */
+}
+
+/* Handle visibility - make them always visible */
+.react-flow__handle {
+  opacity: 1 !important;
+}
+
+/* Enhanced handle styling for better UX */
+.flow-handle-target,
+.flow-handle-source {
+  opacity: 1 !important;
+}
+
+/* Let React Flow handle the default animation styling */
+
+/* Card hover effects - Removed transform to fix dragging */
+.react-flow__node:hover {
+  /* transform: translateY(-1px); -- Removed to fix dragging stuttering */
+  transition: box-shadow 0.2s ease;
+}
+
+/* Enhanced edge styling - Removed problematic hover effects */
+.react-flow__edge path {
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+/* Removed edge hover effects to fix mouse glitching */
+
+/* Floating header fade-in animation */
+@keyframes fade-in-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.group:hover .group-hover\\:opacity-100 {
+  animation: fade-in-down 0.2s ease-out;
+}
+
+/* AI-enhanced field styling (for future use) */
+.ai-enhanced-field {
+  border-color: var(--flow-magic) !important;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%) !important;
+}
+
+.ai-enhanced-field:focus {
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15) !important;
+}
+
+/* Magic sparkle animation for agent indicators */
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+.sparkle-icon {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+/* Status indicator enhancements */
+.status-indicator-running {
+  background: linear-gradient(45deg, var(--flow-primary), var(--flow-magic));
+  animation: pulse-glow 1.5s ease-in-out infinite alternate;
+}
+
+.status-indicator-completed {
+  background: var(--flow-success);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.status-indicator-start {
+  background: linear-gradient(45deg, var(--flow-accent-secondary), var(--flow-primary));
+  border: 2px solid var(--flow-primary);
+}
+
+/* Micro-interactions for buttons - Simplified to avoid conflicts */
+.flow-button {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Removed scale transforms to avoid conflicts with React Flow */
+
+/* Button edge styling - based on xyflow example */
+.button-edge__label {
+  position: absolute;
+  pointer-events: all;
+  font-size: 12px;
+  background: transparent;
+  display: flex;
+  gap: 4px;
+}
+
+.button-edge__button {
+  width: 40px;
+  height: 40px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  color: #999;
+  transition: all 0.15s ease;
+}
+
+.button-edge__button:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+  transform: scale(1.1);
+}
+
+/* Purple styling for repeat button */
+.button-edge__repeat:hover {
+  background: #f3e8ff;
+  border-color: #c4b5fd;
+  color: #7c3aed;
+}
+
+/* Active state for repeat button when feedback loop is configured */
+.button-edge__repeat--active {
+  background: #7c3aed !important;
+  border-color: #7c3aed !important;
+  color: white !important;
+}
+
+.button-edge__repeat--active:hover {
+  background: #6d28d9 !important;
+  border-color: #6d28d9 !important;
+  color: white !important;
+}
+
+/* Dark mode support for button edge */
+.dark .button-edge__button {
+  background: #374151;
+  border-color: #6b7280;
+  color: #d1d5db;
+}
+
+.dark .button-edge__button:hover {
+  background: #7f1d1d;
+  border-color: #dc2626;
+  color: #fca5a5;
+}
+
+.dark .button-edge__repeat:hover {
+  background: #581c87;
+  border-color: #7c3aed;
+  color: #c4b5fd;
+}
+
+.dark .button-edge__repeat--active {
+  background: #7c3aed !important;
+  border-color: #7c3aed !important;
+  color: white !important;
+}
+
+.dark .button-edge__repeat--active:hover {
+  background: #6d28d9 !important;
+  border-color: #6d28d9 !important;
+  color: white !important;
+}
+
+/* Tooltip enhancements */
+.flow-tooltip {
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* React Flow overrides for better integration */
+.react-flow__attribution {
+  opacity: 0.3;
+  transition: opacity 0.2s ease;
+}
+
+.react-flow__attribution:hover {
+  opacity: 0.7;
+}
+
+/* Enhanced minimap styling */
+.react-flow__minimap {
+  border-radius: 8px;
+  border: 1px solid var(--flow-gray-4);
+  overflow: hidden;
+}
+
+/* Control button styling */
+.react-flow__controls button {
+  border-radius: 6px;
+  border: 1px solid var(--flow-gray-4);
+  transition: all 0.2s ease;
+}
+
+.react-flow__controls button:hover {
+  border-color: var(--flow-primary);
+  transform: scale(1.05);
+}
+
+/* ========================================
+   GLASSMORPHISM STYLES
+   ======================================== */
+
+/* Base glassmorphism effect for nodes - Premium Card Design */
+.flow-node-glass {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.flow-node-glass:hover {
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+    0 0 20px rgba(139, 92, 246, 0.2) !important;
+  transform: translateY(-2px);
+}
+
+/* Gradient overlays for different node states */
+.flow-node-gradient-idle {
+  background: linear-gradient(135deg,
+    rgba(139, 92, 246, 0.08) 0%,
+    rgba(168, 85, 247, 0.05) 50%,
+    rgba(139, 92, 246, 0.08) 100%) !important;
+}
+
+.flow-node-gradient-running {
+  background: linear-gradient(135deg,
+    rgba(139, 92, 246, 0.15) 0%,
+    rgba(168, 85, 247, 0.12) 50%,
+    rgba(139, 92, 246, 0.15) 100%) !important;
+  animation: gradient-shift 3s ease infinite !important;
+}
+
+.flow-node-gradient-completed {
+  background: linear-gradient(135deg,
+    rgba(16, 185, 129, 0.12) 0%,
+    rgba(5, 150, 105, 0.08) 50%,
+    rgba(16, 185, 129, 0.12) 100%) !important;
+}
+
+.flow-node-gradient-error {
+  background: linear-gradient(135deg,
+    rgba(239, 68, 68, 0.12) 0%,
+    rgba(220, 38, 38, 0.08) 50%,
+    rgba(239, 68, 68, 0.12) 100%) !important;
+}
+
+.flow-node-gradient-start {
+  background: linear-gradient(135deg,
+    rgba(59, 130, 246, 0.12) 0%,
+    rgba(37, 99, 235, 0.08) 50%,
+    rgba(59, 130, 246, 0.12) 100%) !important;
+}
+
+/* Animated gradient shift */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Enhanced glow for running nodes */
+.flow-node-running-glow {
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.5),
+    0 0 20px rgba(139, 92, 246, 0.4),
+    0 4px 20px rgba(139, 92, 246, 0.3),
+    0 8px 40px rgba(139, 92, 246, 0.2),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
+  animation: enhanced-pulse-glow 2s ease-in-out infinite alternate !important;
+}
+
+@keyframes enhanced-pulse-glow {
+  0% {
+    box-shadow:
+      0 0 0 1px rgba(139, 92, 246, 0.5),
+      0 0 20px rgba(139, 92, 246, 0.4),
+      0 4px 20px rgba(139, 92, 246, 0.3),
+      0 8px 40px rgba(139, 92, 246, 0.2),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(139, 92, 246, 0.7),
+      0 0 30px rgba(139, 92, 246, 0.6),
+      0 6px 30px rgba(139, 92, 246, 0.5),
+      0 12px 60px rgba(139, 92, 246, 0.3),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* ========================================
+   PARTICLE ANIMATIONS
+   ======================================== */
+
+/* Particle effect container */
+@keyframes particle-flow {
+  0% {
+    transform: translateX(0) translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100px) translateY(0);
+    opacity: 0;
+  }
+}
+
+/* Data flow animation on edges */
+.edge-particle-flow {
+  stroke-dasharray: 5, 5;
+  animation: dash-flow 1s linear infinite;
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* Enhanced edge glow when active */
+.edge-active-glow {
+  filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.6));
+  stroke-width: 2.5px !important;
+  stroke: #8b5cf6 !important;
+}
+
+/* ========================================
+   AVATAR & ICON ENHANCEMENTS
+   ======================================== */
+
+/* Avatar container with glow */
+.avatar-glow {
+  position: relative;
+  transition: filter 0.3s ease;
+}
+
+/* Square avatar hover effects */
+.flow-node-glass:hover .avatar-glow {
+  filter: brightness(1.05);
+}
+
+@keyframes avatar-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+/* Sparkle animation enhancement */
+.sparkle-enhanced {
+  animation: sparkle-enhanced 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.6));
+}
+
+@keyframes sparkle-enhanced {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    opacity: 0.7;
+    transform: scale(1.15) rotate(90deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+  75% {
+    opacity: 0.7;
+    transform: scale(1.15) rotate(270deg);
+  }
+}
+
+/* ========================================
+   STATUS INDICATORS ENHANCED
+   ======================================== */
+
+/* Running status with ripple effect */
+.status-running-ripple {
+  position: relative;
+  overflow: visible;
+}
+
+.status-running-ripple::before,
+.status-running-ripple::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--flow-primary);
+  opacity: 0;
+  animation: ripple-effect 2s ease-out infinite;
+}
+
+.status-running-ripple::after {
+  animation-delay: 1s;
+}
+
+@keyframes ripple-effect {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Completed status with celebration effect */
+.status-completed-celebrate {
+  animation: celebrate-bounce 0.6s ease-out;
+}
+
+@keyframes celebrate-bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.2);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  75% {
+    transform: scale(1.05);
+  }
+}
+
+/* ========================================
+   FLOATING ELEMENTS
+   ======================================== */
+
+/* Floating animation for idle nodes */
+@keyframes float-gentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.float-animation {
+  animation: float-gentle 3s ease-in-out infinite;
+}
+
+/* ========================================
+   SHIMMER EFFECT (Loading states)
+   ======================================== */
+
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    left: 100%;
+  }
+}
+
+/* Dark mode shimmer */
+.dark .shimmer-effect::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+}

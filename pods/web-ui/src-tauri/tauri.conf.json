@@ -1,0 +1,71 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "HypernovaLabs Pods",
+  "version": "1.0.0",
+  "identifier": "com.hypernovalabs.pods",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "HypernovaLabs Pods",
+        "width": 1400,
+        "height": 900,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "minWidth": 800,
+        "minHeight": 600,
+        "devtools": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "externalBin": [
+      "binaries/mongod",
+      "binaries/pods-backend",
+      "binaries/pod"
+    ],
+    "resources": [
+      "binaries/chromium/**/*"
+    ],
+    "linux": {
+      "deb": { "files": { "/usr/local/bin/pod": "./binaries/pod" } },
+      "rpm": { "files": { "/usr/local/bin/pod": "./binaries/pod" } }
+    },
+    "macOS": {
+      "entitlements": "Entitlements.plist",
+      "files": { "MacOS/pod": "./binaries/pod" }
+    },
+    "windows": {
+      "nsis": {
+        "installerHooks": "./windows/hooks.nsh"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "pubkey": "REPLACE_WITH_YOUR_PUBLIC_KEY",
+      "endpoints": [
+        "https://github.com/HypernovaLabs/hnl-pods-v2/releases/latest/download/latest.json"
+      ]
+    }
+  }
+}

@@ -1,0 +1,160 @@
+/* Feedback Loop Edge Animations */
+
+@keyframes rotate-dashes {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 16; /* Should match total dash length */
+  }
+}
+
+@keyframes pulse-feedback {
+  0%, 100% {
+    opacity: 1;
+    stroke-width: 2;
+  }
+  50% {
+    opacity: 0.7;
+    stroke-width: 3;
+  }
+}
+
+/* Clean rotating dashed border animation for endpoint indicators */
+.feedback-loop-endpoint-indicator {
+  animation: rotate-dashes 3s linear infinite;
+  transform-origin: center;
+  filter: drop-shadow(0 0 6px rgba(124, 58, 237, 0.4));
+  opacity: 0.7;
+}
+
+.feedback-loop-endpoint-indicator.hovered {
+  animation: rotate-dashes 1.5s linear infinite;
+  filter: drop-shadow(0 0 12px rgba(124, 58, 237, 0.8)) drop-shadow(0 0 24px rgba(124, 58, 237, 0.4));
+  opacity: 1;
+}
+
+/* Enhanced animation when feedback loop is active/running */
+.feedback-loop-endpoint-indicator.active {
+  animation: rotate-dashes 1s linear infinite, pulse-feedback 2s ease-in-out infinite;
+  stroke: #7c3aed;
+  filter: drop-shadow(0 0 4px rgba(124, 58, 237, 0.5));
+}
+
+/* Disable animations when dragging for better performance */
+.feedback-loop-endpoint-indicator.dragging {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Active feedback loop styling */
+.feedback-loop-endpoint-indicator.feedback-active {
+  filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.6)) drop-shadow(0 0 16px rgba(124, 58, 237, 0.3));
+}
+
+/* Feedback loop edge enhancements */
+.feedback-loop-edge {
+  transition: all 0.3s ease-in-out;
+}
+
+.feedback-loop-edge:hover {
+  filter: drop-shadow(0 0 6px rgba(124, 58, 237, 0.4));
+}
+
+.feedback-loop-edge.active {
+  animation: pulse-feedback 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.6));
+}
+
+/* Context menu styling */
+.feedback-loop-context-menu {
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(124, 58, 237, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 2px solid rgba(124, 58, 237, 0.3);
+  animation: context-menu-appear 0.2s ease-out;
+}
+
+@keyframes context-menu-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.feedback-loop-context-menu button {
+  transition: all 0.2s ease-in-out;
+  border-radius: 8px;
+  margin: 2px 8px;
+}
+
+.feedback-loop-context-menu button:hover {
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Edge label enhancements */
+.feedback-loop-label {
+  animation: pulse-feedback 3s ease-in-out infinite;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+
+.feedback-loop-label:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease-in-out;
+}
+
+/* Running state indicators */
+.feedback-loop-running .feedback-loop-endpoint-indicator {
+  stroke: #f59e0b; /* Amber for running state */
+  animation: rotate-dashes 0.8s linear infinite, pulse-feedback 1.5s ease-in-out infinite;
+}
+
+.feedback-loop-completed .feedback-loop-endpoint-indicator {
+  stroke: #10b981; /* Green for completed state */
+  animation: pulse-feedback 3s ease-in-out infinite;
+}
+
+.feedback-loop-failed .feedback-loop-endpoint-indicator {
+  stroke: #ef4444; /* Red for failed state */
+  animation: pulse-feedback 1s ease-in-out infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .feedback-loop-endpoint-indicator {
+    stroke-width: 3;
+  }
+  
+  .feedback-loop-label {
+    font-size: 10px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .feedback-loop-endpoint-indicator {
+    stroke-width: 3;
+    stroke: #ffffff;
+  }
+  
+  .feedback-loop-edge {
+    stroke-width: 4;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .feedback-loop-endpoint-indicator,
+  .feedback-loop-edge,
+  .feedback-loop-label {
+    animation: none !important;
+  }
+  
+  .feedback-loop-endpoint-indicator {
+    stroke-dasharray: none;
+  }
+}

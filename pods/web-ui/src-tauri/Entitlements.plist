@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Disable App Sandbox for distribution outside Mac App Store -->
+    <!-- This allows the app to access /usr/local/bin and execute system commands -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+
+    <!-- Allow network access -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+
+    <key>com.apple.security.network.server</key>
+    <true/>
+
+    <!-- Allow executing unsigned code (for npx, uv, etc.) -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!-- Allow JIT compilation (needed for Node.js) -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+
+    <!-- Disable library validation (allows loading system dylibs) -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>

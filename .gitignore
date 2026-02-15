@@ -1,0 +1,50 @@
+# Rust
+/pods/rust-backend/target/
+**/*.rs.bk
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Tauri
+/pods/web-ui/src-tauri/target/
+
+# Go
+/pods/cli/pods-cli
+/pods/cli/*.exe
+
+# Environment
+.env
+*.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+NUL
+
+# Logs
+*.log
+logs/
+
+# Sidecar binaries (downloaded/built, not source)
+/pods/web-ui/src-tauri/binaries/*.exe
+/pods/web-ui/src-tauri/binaries/chromium/
+
+# Installer outputs
+*.msi
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.nsis.zip
+*.nsis.zip.sig
+
+# Tauri signing keys
+*.key
