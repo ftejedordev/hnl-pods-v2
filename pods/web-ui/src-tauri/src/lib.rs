@@ -470,6 +470,35 @@ fn get_system_dependencies(state: tauri::State<AppState>) -> SystemDependencies 
     state.system_dependencies.clone()
 }
 
+#[tauri::command]
+fn shutdown_services(state: tauri::State<AppState>) -> Result<(), String> {
+    log::info!("🔄 Shutdown requested for update - stopping services...");
+
+    if let Ok(mut backend) = state.backend_manager.lock() {
+        log::info!("🔌 Stopping backend...");
+        backend.shutdown();
+    }
+
+    if let Ok(mut db) = state.database_manager.lock() {
+        log::info!("🗄️  Stopping MongoDB...");
+        db.shutdown();
+    }
+
+    // Kill orphan MCP processes
+    if cfg!(target_os = "windows") {
+        let _ = std::process::Command::new("taskkill")
+            .args(&["/F", "/IM", "node.exe"])
+            .output();
+    } else {
+        let _ = std::process::Command::new("pkill")
+            .args(&["-f", "mcp-server-"])
+            .output();
+    }
+
+    log::info!("✅ Services stopped - ready for update");
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -738,7 +767,7 @@ pub fn run() {
         api.prevent_close();
       }
     })
-    .invoke_handler(tauri::generate_handler![check_services_health, get_system_dependencies])
+    .invoke_handler(tauri::generate_handler![check_services_health, get_system_dependencies, shutdown_services])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

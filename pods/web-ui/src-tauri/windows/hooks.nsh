@@ -1,5 +1,27 @@
 ; HypernovaLabs Pods - NSIS Installer Hooks
-; Agrega el comando 'pod' al PATH del sistema para uso desde terminal
+
+; ============================================
+; PRE-INSTALL: Matar procesos para evitar archivos bloqueados
+; ============================================
+!macro NSIS_HOOK_PREINSTALL
+  DetailPrint "Cerrando procesos de HypernovaLabs Pods..."
+
+  ; Matar la app principal
+  nsExec::ExecToLog 'taskkill /F /IM "HypernovaLabs Pods.exe" /T'
+  nsExec::ExecToLog 'taskkill /F /IM "hypernova-pods.exe" /T'
+
+  ; Matar sidecars
+  nsExec::ExecToLog 'taskkill /F /IM "mongod.exe"'
+  nsExec::ExecToLog 'taskkill /F /IM "pods-backend.exe"'
+
+  ; Matar procesos MCP (node) que podrían estar conectados
+  nsExec::ExecToLog 'taskkill /F /IM "pod.exe"'
+
+  ; Esperar a que los procesos terminen y liberen archivos
+  Sleep 2000
+
+  DetailPrint "Procesos cerrados."
+!macroend
 
 ; ============================================
 ; POST-INSTALL: Agregar CLI al PATH

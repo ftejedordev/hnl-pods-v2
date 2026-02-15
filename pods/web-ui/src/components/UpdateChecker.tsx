@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { ask, message } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
 
 export function UpdateChecker() {
   const [checking, setChecking] = useState(false);
@@ -36,6 +37,14 @@ export function UpdateChecker() {
             console.log('User confirmed update installation');
 
             try {
+              // Stop sidecar services before installing to avoid locked files
+              console.log('Stopping services before update...');
+              await invoke('shutdown_services');
+              console.log('Services stopped');
+
+              // Small delay to ensure processes are fully terminated
+              await new Promise(resolve => setTimeout(resolve, 1500));
+
               // Download and install the update
               console.log('Downloading update...');
               let downloaded = 0;
@@ -58,7 +67,7 @@ export function UpdateChecker() {
                 }
               });
 
-              console.log('✅ Update downloaded successfully - restarting app...');
+              console.log('Update downloaded successfully - restarting app...');
 
               // Show success message
               await message('La actualización se ha descargado. La aplicación se reiniciará para aplicar los cambios.', {
