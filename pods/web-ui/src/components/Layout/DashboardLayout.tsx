@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getVersion } from '@tauri-apps/api/app';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../ThemeProvider';
 import {
@@ -31,6 +32,11 @@ export function DashboardLayout({ children, noPadding = false, hideSidebar = fal
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const [appVersion, setAppVersion] = useState('');
+
+  useEffect(() => {
+    getVersion().then(v => setAppVersion(v)).catch(() => setAppVersion('dev'));
+  }, []);
 
   const currentPath = location.pathname.split('/')[2] || 'agents';
 
@@ -94,7 +100,7 @@ export function DashboardLayout({ children, noPadding = false, hideSidebar = fal
                   HNL Pods
                 </h1>
                 <Badge variant="outline" className="w-fit text-xs bg-primary/10 text-primary border-primary/30">
-                  v1.0.3
+                  v{appVersion}
                 </Badge>
               </div>
               <SidebarTrigger className="h-6 w-6" />

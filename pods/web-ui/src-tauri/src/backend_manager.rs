@@ -124,6 +124,10 @@ impl BackendManager {
             .env("NPM_CONFIG_PREFIX", &npx_cache_dir)
             .env("PLAYWRIGHT_BROWSERS_PATH", chromium_base_dir.to_str().unwrap_or(""))
             .env("ENCRYPTION_KEY", "hypernova_encryption_key_2024_pods")
+            .env("SUPABASE_URL", &std::env::var("SUPABASE_URL")
+                .unwrap_or_else(|_| "https://naxensxazwrosphdttqi.supabase.co".to_string()))
+            .env("SUPABASE_KEY", &std::env::var("SUPABASE_KEY")
+                .unwrap_or_else(|_| "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5heGVuc3hhendyb3NwaGR0dHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyMDc0OTUsImV4cCI6MjA4Njc4MzQ5NX0.h9XYSc6rHst2L2OOvU9WgiGviNP_pcJzGr9Oyy4hWIU".to_string()))
             .env("RUST_LOG", "info,pods_backend=debug")
             .spawn()
             .map_err(|e| format!("Failed to start backend: {}", e))?;

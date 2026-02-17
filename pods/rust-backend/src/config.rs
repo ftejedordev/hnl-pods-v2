@@ -12,6 +12,8 @@ pub struct AppConfig {
     pub jwt_expire_minutes: i64,
     pub fernet_key: FernetCipher,
     pub cors_origins: Vec<String>,
+    pub supabase_url: Option<String>,
+    pub supabase_key: Option<String>,
 }
 
 impl AppConfig {
@@ -51,6 +53,15 @@ impl AppConfig {
             "http://127.0.0.1:4173".to_string(),
         ];
 
+        let supabase_url = env::var("SUPABASE_URL").ok();
+        let supabase_key = env::var("SUPABASE_KEY").ok();
+
+        if supabase_url.is_some() && supabase_key.is_some() {
+            tracing::info!("Supabase license validation enabled");
+        } else {
+            tracing::warn!("Supabase not configured - license validation disabled");
+        }
+
         Self {
             db_uri_mongo,
             jwt_secret_key,
@@ -58,6 +69,8 @@ impl AppConfig {
             jwt_expire_minutes,
             fernet_key,
             cors_origins,
+            supabase_url,
+            supabase_key,
         }
     }
 }

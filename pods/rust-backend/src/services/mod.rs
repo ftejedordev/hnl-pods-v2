@@ -4,3 +4,4 @@ pub mod agent_api_client;
 pub mod flow_service;
 pub mod flow_executor;
 pub mod langsmith_service;
+pub mod license_service;

@@ -9,6 +9,17 @@ use tauri::Manager;
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
 use tauri::menu::{Menu, MenuItem};
 
+/// Create a Command that hides the console window on Windows (no CMD flash).
+fn silent_cmd(program: &str) -> std::process::Command {
+    let mut cmd = std::process::Command::new(program);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    cmd
+}
+
 /// Detected system dependencies paths
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct SystemDependencies {
@@ -151,7 +162,7 @@ pub fn get_user_shell_path() -> Option<String> {
 }
 
 fn try_launchctl_path() -> Option<String> {
-    let output = std::process::Command::new("launchctl")
+    let output = silent_cmd("launchctl")
         .args(&["getenv", "PATH"])
         .output()
         .ok()?;
@@ -168,7 +179,7 @@ fn try_launchctl_path() -> Option<String> {
 fn try_shell_login_path() -> Option<String> {
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
 
-    let output = std::process::Command::new(&shell)
+    let output = silent_cmd(&shell)
         .arg("-l")
         .arg("-c")
         .arg("echo $PATH")
@@ -249,7 +260,7 @@ fn find_command_path(cmd: &str) -> Option<(PathBuf, String)> {
 
         // Try with .exe extension first
         let cmd_exe = format!("{}.exe", cmd);
-        let output = std::process::Command::new("where")
+        let output = silent_cmd("where")
             .arg(&cmd_exe)
             .output()
             .ok()?;
@@ -262,7 +273,7 @@ fn find_command_path(cmd: &str) -> Option<(PathBuf, String)> {
             log::info!("  Found {} at: {:?}", cmd, cmd_path);
 
             // .exe files can be executed directly
-            let version_output = std::process::Command::new(&cmd_path)
+            let version_output = silent_cmd(cmd_path.to_str().unwrap_or(""))
                 .arg("--version")
                 .output()
                 .ok()?;
@@ -281,7 +292,7 @@ fn find_command_path(cmd: &str) -> Option<(PathBuf, String)> {
         }
 
         // Also try without .exe (for .cmd files like npx.cmd)
-        let output = std::process::Command::new("where")
+        let output = silent_cmd("where")
             .arg(cmd)
             .output()
             .ok()?;
@@ -302,11 +313,11 @@ fn find_command_path(cmd: &str) -> Option<(PathBuf, String)> {
                 // On Windows, .cmd files need to be executed through cmd.exe
                 let version_output = if path_line.ends_with(".cmd") || !path_line.ends_with(".exe") {
                     log::info!("  Executing via cmd.exe /c");
-                    std::process::Command::new("cmd")
+                    silent_cmd("cmd")
                         .args(&["/c", cmd, "--version"])
                         .output()
                 } else {
-                    std::process::Command::new(&cmd_path)
+                    silent_cmd(cmd_path.to_str().unwrap_or(""))
                         .arg("--version")
                         .output()
                 };
@@ -423,7 +434,7 @@ fn check_and_verify_command(cmd_path: &PathBuf, cmd_name: &str, path_env: &str) 
 
     // Try to execute and get version
     // IMPORTANT: Pass PATH so scripts like npx can find node
-    let version_output = std::process::Command::new(cmd_path)
+    let version_output = silent_cmd(cmd_path.to_str().unwrap_or(""))
         .arg("--version")
         .env("PATH", path_env)  // ← KEY FIX: NPX needs to find 'node'
         .output()
@@ -457,7 +468,7 @@ fn find_free_port() -> Result<u16, String> {
 pub struct AppState {
     database_manager: Mutex<DatabaseManager>,
     backend_manager: Mutex<BackendManager>,
-    system_dependencies: SystemDependencies,
+    system_dependencies: Mutex<SystemDependencies>,
     backend_port: u16,
     mongo_port: u16,
 }
@@ -479,7 +490,7 @@ fn check_services_health(state: tauri::State<AppState>) -> Result<serde_json::Va
 
 #[tauri::command]
 fn get_system_dependencies(state: tauri::State<AppState>) -> SystemDependencies {
-    state.system_dependencies.clone()
+    state.system_dependencies.lock().unwrap().clone()
 }
 
 #[tauri::command]
@@ -503,11 +514,11 @@ fn shutdown_services(state: tauri::State<AppState>) -> Result<(), String> {
 
     // Kill orphan MCP processes
     if cfg!(target_os = "windows") {
-        let _ = std::process::Command::new("taskkill")
+        let _ = silent_cmd("taskkill")
             .args(&["/F", "/IM", "node.exe"])
             .output();
     } else {
-        let _ = std::process::Command::new("pkill")
+        let _ = silent_cmd("pkill")
             .args(&["-f", "mcp-server-"])
             .output();
     }
@@ -584,15 +595,15 @@ pub fn run() {
               log::info!("🧹 Limpiando procesos MCP...");
               if cfg!(target_os = "windows") {
                 // Windows: usar taskkill para matar procesos node relacionados con MCP
-                let _ = std::process::Command::new("taskkill")
+                let _ = silent_cmd("taskkill")
                   .args(&["/F", "/IM", "node.exe"])
                   .output();
               } else {
                 // Unix/macOS: usar pkill
-                let _ = std::process::Command::new("pkill")
+                let _ = silent_cmd("pkill")
                   .args(&["-f", "mcp-server-"])
                   .output();
-                let _ = std::process::Command::new("pkill")
+                let _ = silent_cmd("pkill")
                   .args(&["-f", "bash-mcp"])
                   .output();
               }
@@ -638,7 +649,7 @@ pub fn run() {
       let skip_embedded_services = cfg!(debug_assertions) &&
         std::env::var("SKIP_EMBEDDED_SERVICES").unwrap_or_default() == "true";
 
-      let (db_manager, backend_manager, system_deps, mongo_port, backend_port) = if skip_embedded_services {
+      if skip_embedded_services {
         log::info!("SKIP_EMBEDDED_SERVICES=true - Using external services for development");
         log::info!("Expected MongoDB at: mongodb://localhost:27017");
         log::info!("Expected Backend at: http://localhost:8000");
@@ -656,37 +667,15 @@ pub fn run() {
           }
         });
 
-        (DatabaseManager::new(&app.handle())?, BackendManager::new(), system_deps, 27017u16, 8000u16)
+        app.manage(AppState {
+          database_manager: Mutex::new(DatabaseManager::new(&app.handle())?),
+          backend_manager: Mutex::new(BackendManager::new()),
+          system_dependencies: Mutex::new(system_deps),
+          backend_port: 8000,
+          mongo_port: 27017,
+        });
       } else {
-        log::info!("Starting embedded database and backend services...");
-
-        // 🧹 CLEANUP: Matar procesos huérfanos por NOMBRE (no por puerto)
-        log::info!("🧹 Limpiando procesos huérfanos antes de iniciar servicios...");
-
-        if cfg!(target_os = "windows") {
-          let _ = std::process::Command::new("taskkill")
-            .args(&["/F", "/IM", "pods-backend.exe"])
-            .output();
-
-          let _ = std::process::Command::new("taskkill")
-            .args(&["/F", "/IM", "mongod.exe"])
-            .output();
-        } else {
-          let _ = std::process::Command::new("pkill")
-            .args(&["-9", "-f", "pods-backend"])
-            .output();
-
-          let _ = std::process::Command::new("pkill")
-            .args(&["-9", "mongod"])
-            .output();
-        }
-
-        log::info!("✅ Limpieza de procesos completada");
-
-        // Esperar un momento para que los procesos terminen
-        std::thread::sleep(std::time::Duration::from_millis(500));
-
-        // Find free ports for MongoDB and Backend
+        // Pre-allocate ports on the main thread (instant, no blocking)
         let mongo_port = find_free_port()
           .map_err(|e| format!("Failed to find free port for MongoDB: {}", e))?;
         let backend_port = find_free_port()
@@ -694,72 +683,97 @@ pub fn run() {
 
         log::info!("Dynamic ports assigned - MongoDB: {}, Backend: {}", mongo_port, backend_port);
 
-        // Validate system dependencies and get their paths
-        log::info!("Validating system dependencies (Node.js, NPX, UV)...");
-        let system_deps = match validate_system_dependencies() {
-          Ok(deps) => {
-            log::info!("✅ System dependencies validated successfully");
+        // Register state immediately so commands work while services start
+        app.manage(AppState {
+          database_manager: Mutex::new(DatabaseManager::new(&app.handle())?),
+          backend_manager: Mutex::new(BackendManager::new()),
+          system_dependencies: Mutex::new(SystemDependencies {
+            node_bin_dir: None, npx_bin_dir: None, uv_bin_dir: None,
+            node_version: None, npx_version: None, uv_version: None,
+          }),
+          backend_port,
+          mongo_port,
+        });
 
-            // Log detected paths
-            let bin_dirs = deps.get_bin_dirs();
-            log::info!("Detected bin directories: {:?}", bin_dirs);
+        // Move all heavy work to a background thread so the window doesn't freeze
+        let app_handle = app.handle().clone();
+        std::thread::spawn(move || {
+          log::info!("Starting embedded database and backend services (background)...");
 
-            deps
+          // 🧹 CLEANUP: Matar procesos huérfanos por NOMBRE (no por puerto)
+          log::info!("🧹 Limpiando procesos huérfanos antes de iniciar servicios...");
+
+          if cfg!(target_os = "windows") {
+            let _ = silent_cmd("taskkill")
+              .args(&["/F", "/IM", "pods-backend.exe"])
+              .output();
+
+            let _ = silent_cmd("taskkill")
+              .args(&["/F", "/IM", "mongod.exe"])
+              .output();
+          } else {
+            let _ = silent_cmd("pkill")
+              .args(&["-9", "-f", "pods-backend"])
+              .output();
+
+            let _ = silent_cmd("pkill")
+              .args(&["-9", "mongod"])
+              .output();
           }
-          Err(error_msg) => {
-            log::error!("❌ System dependencies validation failed: {}", error_msg);
 
-            // Show error dialog to user
-            use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
-            let _ = app.dialog()
-              .message(format!(
-                "⚠️ {}\n\n\
-                Por favor instala las dependencias faltantes y reinicia la aplicación.",
-                error_msg
-              ))
-              .title("Dependencias del Sistema Requeridas")
-              .kind(MessageDialogKind::Error)
-              .blocking_show();
+          log::info!("✅ Limpieza de procesos completada");
+          std::thread::sleep(std::time::Duration::from_millis(500));
 
-            // Exit the app with error
-            return Err(error_msg.into());
+          // Validate system dependencies
+          log::info!("Validating system dependencies (Node.js, NPX, UV)...");
+          match validate_system_dependencies() {
+            Ok(deps) => {
+              log::info!("✅ System dependencies validated successfully");
+              let bin_dirs = deps.get_bin_dirs();
+              log::info!("Detected bin directories: {:?}", bin_dirs);
+
+              // Update system_dependencies in state
+              if let Some(state) = app_handle.try_state::<AppState>() {
+                let mut sys_deps = state.system_dependencies.lock().unwrap();
+                *sys_deps = deps.clone();
+              }
+
+              // Start MongoDB
+              if let Some(state) = app_handle.try_state::<AppState>() {
+                let mut db = state.database_manager.lock().unwrap();
+                if let Err(e) = db.start_mongodb(&app_handle, mongo_port) {
+                  log::error!("❌ Failed to start MongoDB: {}", e);
+                  return;
+                }
+              }
+
+              // Start Backend
+              if let Some(state) = app_handle.try_state::<AppState>() {
+                let mut backend = state.backend_manager.lock().unwrap();
+                if let Err(e) = backend.start_backend(&app_handle, deps, backend_port, mongo_port) {
+                  log::error!("❌ Failed to start backend: {}", e);
+                  return;
+                }
+              }
+
+              log::info!("All embedded services started successfully");
+            }
+            Err(error_msg) => {
+              log::error!("❌ System dependencies validation failed: {}", error_msg);
+              use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+              let _ = app_handle.dialog()
+                .message(format!(
+                  "⚠️ {}\n\n\
+                  Por favor instala las dependencias faltantes y reinicia la aplicación.",
+                  error_msg
+                ))
+                .title("Dependencias del Sistema Requeridas")
+                .kind(MessageDialogKind::Error)
+                .blocking_show();
+            }
           }
-        };
-
-        // Initialize database manager
-        let mut db_manager = DatabaseManager::new(&app.handle())
-          .map_err(|e| format!("Failed to create database manager: {}", e))?;
-
-        // Start MongoDB (includes waiting for it to be ready)
-        db_manager.start_mongodb(&app.handle(), mongo_port)
-          .map_err(|e| format!("Failed to start MongoDB: {}", e))?;
-
-        // Initialize backend manager with detected system dependencies
-        let mut backend_manager = BackendManager::new();
-
-        // Clone system_deps before moving into start_backend
-        let system_deps_clone = system_deps.clone();
-
-        // Start backend with detected dependency paths and dynamic ports
-        backend_manager.start_backend(&app.handle(), system_deps_clone, backend_port, mongo_port)
-          .map_err(|e| format!("Failed to start backend: {}", e))?;
-
-        // Wait for backend to be ready
-        std::thread::sleep(std::time::Duration::from_secs(2));
-
-        log::info!("All embedded services started successfully");
-
-        (db_manager, backend_manager, system_deps, mongo_port, backend_port)
-      };
-
-      // Store managers and dependencies in app state
-      app.manage(AppState {
-        database_manager: Mutex::new(db_manager),
-        backend_manager: Mutex::new(backend_manager),
-        system_dependencies: system_deps,
-        backend_port,
-        mongo_port,
-      });
+        });
+      }
 
       Ok(())
     })

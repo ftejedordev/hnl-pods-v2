@@ -16,6 +16,7 @@ pub fn router() -> Router<AppState> {
         .route("/register", post(register))
         .route("/login", post(login))
         .route("/me", get(me))
+        .route("/license-status", get(license_status))
 }
 
 async fn register(
@@ -58,6 +59,14 @@ async fn register(
         .map(|id| id.to_hex())
         .unwrap_or_default();
 
+    // Sync to Supabase (non-blocking — don't fail registration if Supabase is down)
+    if let (Some(url), Some(key)) = (&state.config.supabase_url, &state.config.supabase_key) {
+        let license_svc = crate::services::license_service::LicenseService::new(url, key);
+        if let Err(e) = license_svc.register_license(&payload.username).await {
+            tracing::warn!("Failed to sync license to Supabase: {}", e);
+        }
+    }
+
     Ok(Json(json!({
         "message": "User registered successfully",
         "user_id": user_id
@@ -89,6 +98,23 @@ async fn login(
         ));
     }
 
+    // Check license in Supabase (if configured)
+    if let (Some(url), Some(key)) = (&state.config.supabase_url, &state.config.supabase_key) {
+        let license_svc = crate::services::license_service::LicenseService::new(url, key);
+        match license_svc.check_license(&payload.username).await {
+            Ok(true) => { /* License active — proceed */ }
+            Ok(false) => {
+                return Err(AppError::Forbidden(
+                    "Tu licencia no está activa. Contacta al administrador.".to_string(),
+                ));
+            }
+            Err(e) => {
+                tracing::warn!("License check failed, allowing access: {}", e);
+                // Fail-open: if Supabase is unreachable, allow login
+            }
+        }
+    }
+
     // Create JWT
     let token = create_access_token(
         &payload.username,
@@ -108,4 +134,24 @@ async fn me(auth_user: AuthUser) -> Json<User> {
         username: auth_user.username,
         created_at: Utc::now(), // TODO: fetch from DB
     })
+}
+
+async fn license_status(
+    State(state): State<AppState>,
+    auth_user: AuthUser,
+) -> Result<Json<Value>, AppError> {
+    // If Supabase is not configured, always return active
+    let (Some(url), Some(key)) = (&state.config.supabase_url, &state.config.supabase_key) else {
+        return Ok(Json(json!({ "active": true })));
+    };
+
+    let license_svc = crate::services::license_service::LicenseService::new(url, key);
+    match license_svc.check_license(&auth_user.username).await {
+        Ok(active) => Ok(Json(json!({ "active": active }))),
+        Err(e) => {
+            tracing::warn!("License status check failed: {}", e);
+            // Fail-closed: if Supabase is unreachable, report inactive
+            Ok(Json(json!({ "active": false })))
+        }
+    }
 }

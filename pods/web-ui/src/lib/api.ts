@@ -71,6 +71,11 @@ export const authApi = {
     const response = await mcp_api.get<User>('/auth/me');
     return response.data;
   },
+
+  checkLicense: async (): Promise<{ active: boolean }> => {
+    const response = await mcp_api.get<{ active: boolean }>('/auth/license-status');
+    return response.data;
+  },
 };
 
 /**

@@ -65,6 +65,8 @@ Clave de firma Tauri en `~/.tauri/hnl-pods-v2.key`. Si no existe:
 npx tauri signer generate -w ~/.tauri/hnl-pods-v2.key
 ```
 
+> **Nota sobre env vars de firma:** Tauri v2.8+ usa `TAURI_SIGNING_PRIVATE_KEY`. Versiones anteriores usaban `TAURI_PRIVATE_KEY`. El comando `tauri signer sign` todavia acepta `TAURI_PRIVATE_KEY`.
+
 ### 1.2 Actualizar la version
 
 Editar `pods/web-ui/src-tauri/tauri.conf.json`:
@@ -151,7 +153,7 @@ ls pods/web-ui/src-tauri/binaries/
 
 ```bash
 cd pods/web-ui
-TAURI_PRIVATE_KEY=$(cat ~/.tauri/hnl-pods-v2.key) TAURI_PRIVATE_KEY_PASSWORD="" npm run tauri:build
+TAURI_SIGNING_PRIVATE_KEY=$(cat ~/.tauri/hnl-pods-v2.key) TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" npm run tauri:build
 ```
 
 > **IMPORTANTE:** La variable de entorno es `TAURI_PRIVATE_KEY`, NO `TAURI_SIGNING_PRIVATE_KEY`.
@@ -173,7 +175,7 @@ src-tauri/target/release/bundle/nsis/
 
 ```bash
 cd pods/web-ui
-TAURI_PRIVATE_KEY=$(cat ~/.tauri/hnl-pods-v2.key) TAURI_PRIVATE_KEY_PASSWORD="" \
+TAURI_SIGNING_PRIVATE_KEY=$(cat ~/.tauri/hnl-pods-v2.key) TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" \
   npx tauri signer sign "src-tauri/target/release/bundle/nsis/HypernovaLabs Pods_X.Y.Z_x64-setup.nsis.zip"
 ```
 
@@ -337,7 +339,7 @@ chmod +x pods/web-ui/src-tauri/binaries/pod-aarch64-apple-darwin
 ```bash
 cd pods/web-ui
 npm install
-TAURI_PRIVATE_KEY=$(cat ~/.tauri/hnl-pods-v2.key) TAURI_PRIVATE_KEY_PASSWORD="" npm run tauri:build
+TAURI_SIGNING_PRIVATE_KEY=$(cat ~/.tauri/hnl-pods-v2.key) TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" npm run tauri:build
 ```
 
 Archivos generados:
@@ -361,7 +363,7 @@ src-tauri/target/release/bundle/
 #   "signingIdentity": "Developer ID Application: Tu Nombre (TEAM_ID)"
 
 # 2. Build firmado (Tauri firma automaticamente si la identidad esta configurada)
-TAURI_PRIVATE_KEY=$(cat ~/.tauri/hnl-pods-v2.key) TAURI_PRIVATE_KEY_PASSWORD="" npm run tauri:build
+TAURI_SIGNING_PRIVATE_KEY=$(cat ~/.tauri/hnl-pods-v2.key) TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" npm run tauri:build
 
 # 3. Notarizar (para que Gatekeeper no bloquee):
 xcrun notarytool submit "src-tauri/target/release/bundle/dmg/HypernovaLabs Pods_X.Y.Z_aarch64.dmg" \
@@ -479,12 +481,12 @@ Con `SKIP_EMBEDDED_SERVICES=true`, se usan los puertos default (27017/8000). No 
 |--------|---------|
 | Build backend | `cd pods/rust-backend && cargo build --release` |
 | Build CLI | `cd pods/cli && go build -o pod ./main.go` |
-| Build Tauri (Windows) | `TAURI_PRIVATE_KEY=$(cat ~/.tauri/hnl-pods-v2.key) TAURI_PRIVATE_KEY_PASSWORD="" npm run tauri:build` |
+| Build Tauri (Windows) | `TAURI_SIGNING_PRIVATE_KEY=$(cat ~/.tauri/hnl-pods-v2.key) TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" npm run tauri:build` |
 | Build Tauri (macOS) | Mismo comando, genera `.dmg` en vez de `.exe` |
 | Dev completo | `npm run tauri:dev` |
 | Dev sin sidecars | `npm run tauri:dev:external` |
 | Dev solo frontend | `npm run dev` |
-| Firmar | `TAURI_PRIVATE_KEY=... npx tauri signer sign "ruta/al/archivo"` |
+| Firmar | `TAURI_SIGNING_PRIVATE_KEY=... npx tauri signer sign "ruta/al/archivo"` |
 | Generar clave | `npx tauri signer generate -w ~/.tauri/hnl-pods-v2.key` |
 | Ver target triple | `rustc -vV \| grep host` |
 

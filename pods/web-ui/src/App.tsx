@@ -17,6 +17,7 @@ import { FlowBuilderPage } from '@/pages/Dashboard/FlowBuilderPage';
 import { LLMsPage } from '@/pages/Dashboard/LLMsPage';
 import StartupLoader from '@/components/StartupLoader';
 import { SystemDependenciesCheck } from '@/components/SystemDependenciesCheck';
+import { LicenseGuard } from '@/components/LicenseGuard';
 import { checkForUpdatesOnStartup, setupPeriodicUpdateChecks } from '@/utils/updater';
 
 // Componente para escuchar eventos de autenticación
@@ -82,6 +83,7 @@ function App() {
           {/* Listener de eventos de autenticación */}
           <AuthEventListener />
 
+          <LicenseGuard>
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
@@ -118,6 +120,7 @@ function App() {
             {/* Default redirect */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
+          </LicenseGuard>
         </Router>
         <Toaster />
       </AuthProvider>
