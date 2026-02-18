@@ -93,7 +93,7 @@ export const executionsApi = {
   // Subscribe to execution events via HTTP polling (reliable in Tauri webview)
   subscribeToExecutionEvents: (executionId: string, onEvent: (event: any) => void, onError?: (error: Error) => void): SSEConnection => {
     let isClosed = false;
-    let readyState = EventSource.CONNECTING;
+    let readyState: number = EventSource.CONNECTING;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let eventsSeen = 0;
     let consecutiveErrors = 0;

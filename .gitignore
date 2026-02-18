@@ -55,3 +55,8 @@ data/
 # Node artifacts in rust-backend (test server)
 /pods/rust-backend/backend/
 /pods/rust-backend/package-lock.json
+CLAUDE.md
+.gitignore
+pods/web-ui/src-tauri/binaries/pods-backend-x86_64-unknown-linux-gnu
+pods/web-ui/src-tauri/binaries/pod-x86_64-unknown-linux-gnu
+pods/web-ui/src-tauri/binaries/pod
