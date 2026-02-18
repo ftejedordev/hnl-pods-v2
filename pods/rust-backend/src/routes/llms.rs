@@ -69,7 +69,7 @@ use crate::config::AppConfig;
 async fn get_llms(
     State(state): State<AppState>,
     auth_user: AuthUser,
-) -> Result<Json<Vec<LLMResponse>>, AppError> {
+) -> Result<Json<Value>, AppError> {
     let db = state.mongo_client.database(DB_NAME);
     let collection = db.collection::<bson::Document>(LLMS);
 
@@ -83,7 +83,8 @@ async fn get_llms(
         llms.push(doc_to_llm_response(&doc, &state.config)?);
     }
 
-    Ok(Json(llms))
+    let total = llms.len() as i64;
+    Ok(Json(json!({ "llms": llms, "total": total })))
 }
 
 async fn get_llm(

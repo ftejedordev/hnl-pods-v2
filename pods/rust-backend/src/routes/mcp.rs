@@ -205,6 +205,9 @@ async fn update_connection(
     let filter = build_id_filter(&connection_id, if is_system { "system" } else { &auth_user.id }, is_system);
     collection.update_one(filter, doc! { "$set": update_doc }).await?;
 
+    // Disconnect existing MCP session so it reconnects with updated args
+    state.mcp_manager.remove_session(&connection_id).await;
+
     let updated = find_connection(&collection, &connection_id, &auth_user.id).await?
         .ok_or_else(|| AppError::NotFound("Connection not found after update".to_string()))?;
 
@@ -236,6 +239,9 @@ async fn delete_connection(
     if deleted.deleted_count == 0 {
         return Err(AppError::NotFound("MCP server connection not found".to_string()));
     }
+
+    // Clean up cached MCP session
+    state.mcp_manager.remove_session(&connection_id).await;
 
     Ok(Json(json!({ "message": "MCP server connection deleted successfully" })))
 }

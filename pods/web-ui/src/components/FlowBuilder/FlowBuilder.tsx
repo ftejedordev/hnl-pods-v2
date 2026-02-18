@@ -1509,21 +1509,22 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({
           
           
           // For feedback loops, store outputs in a special feedback section
-          if (event.data && event.data.agent_output) {
+          const feedbackOutput = event.data?.agent_output || event.data?.result?.output;
+          if (feedbackOutput) {
             setStepOutputs(prev => {
               const currentStepData = prev[event.step_id] || {};
               const existingIterations = currentStepData.feedback_iterations || [];
-              
+
               // Check if this exact iteration already exists to prevent duplicates
-              const alreadyExists = existingIterations.some(iter => 
+              const alreadyExists = existingIterations.some(iter =>
                 iter.iteration === iteration && iter.role === role
               );
-              
+
               if (alreadyExists) {
                 return prev;
               }
-              
-              
+
+
               return {
                 ...prev,
                 [event.step_id]: {
@@ -1533,7 +1534,7 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({
                     {
                       iteration: iteration,
                       role: role,
-                      output: event.data.agent_output,
+                      output: feedbackOutput,
                       timestamp: new Date().toISOString(),
                       stepName: stepName
                     }
@@ -1546,12 +1547,14 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({
           console.log(`🔄 Feedback Loop Complete: ${stepName} finished ${role === 'assessor' ? 'assessment' : 'improvement'} (iteration ${iteration})`);
         } else {
           // Regular step completion
-          if (event.data && event.data.agent_output) {
+          // Support both event.data.agent_output (Python backend) and event.data.result.output (Rust backend)
+          const agentOutput = event.data?.agent_output || event.data?.result?.output;
+          if (agentOutput) {
             setStepOutputs(prev => ({
               ...prev,
               [event.step_id]: {
                 ...prev[event.step_id],
-                final_output: event.data.agent_output
+                final_output: agentOutput
               }
             }));
           }

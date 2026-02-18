@@ -30,6 +30,10 @@ impl DatabaseManager {
         })
     }
 
+    pub fn set_port(&mut self, port: u16) {
+        self.port = port;
+    }
+
     pub fn start_mongodb(&mut self, app_handle: &tauri::AppHandle, port: u16) -> Result<(), String> {
         self.port = port;
         let mongo_data_dir = self.data_dir.join("mongodb");

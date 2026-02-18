@@ -25,6 +25,7 @@ pub fn router() -> Router<AppState> {
         .route("/{execution_id}", get(get_execution))
         .route("/{execution_id}/cancel", post(cancel_execution))
         .route("/{execution_id}/approve", post(approve_execution))
+        .route("/{execution_id}/events", get(list_execution_events))
         .route("/{execution_id}/stream", get(stream_execution))
 }
 
@@ -136,6 +137,80 @@ async fn approve_execution(
     })))
 }
 
+#[derive(Debug, Deserialize)]
+struct EventsQuery {
+    #[serde(default)]
+    after: Option<u64>,
+}
+
+/// REST endpoint for polling execution events (alternative to SSE)
+async fn list_execution_events(
+    State(state): State<AppState>,
+    auth_user: AuthUser,
+    Path(execution_id): Path<String>,
+    Query(params): Query<EventsQuery>,
+) -> Result<Json<Vec<Value>>, AppError> {
+    // Verify execution belongs to user
+    let oid = ObjectId::parse_str(&execution_id)?;
+    let db = state.mongo_client.database(DB_NAME);
+    let exec_collection = db.collection::<bson::Document>(FLOW_EXECUTIONS);
+    let _exec = exec_collection
+        .find_one(doc! { "_id": oid, "user_id": &auth_user.id })
+        .await?
+        .ok_or_else(|| AppError::NotFound("Execution not found".to_string()))?;
+
+    // Query events
+    let events_collection = db.collection::<bson::Document>(FLOW_EVENTS);
+    let query = doc! { "execution_id": &execution_id };
+
+    let skip_count = params.after.unwrap_or(0);
+    let options = mongodb::options::FindOptions::builder()
+        .sort(doc! { "timestamp": 1 })
+        .skip(Some(skip_count))
+        .build();
+
+    let mut cursor = events_collection.find(query).with_options(options).await?;
+    let mut events = Vec::new();
+
+    while cursor.advance().await? {
+        let doc = cursor.deserialize_current()?;
+        events.push(bson_event_to_json(&doc));
+    }
+
+    Ok(Json(events))
+}
+
+/// Convert a BSON event document to JSON, handling bson::DateTime safely
+fn bson_event_to_json(doc: &bson::Document) -> Value {
+    let mut obj = serde_json::Map::new();
+
+    if let Ok(id) = doc.get_object_id("_id") {
+        obj.insert("id".to_string(), json!(id.to_hex()));
+    }
+    if let Ok(v) = doc.get_str("execution_id") {
+        obj.insert("execution_id".to_string(), json!(v));
+    }
+    if let Ok(v) = doc.get_str("event_type") {
+        obj.insert("event_type".to_string(), json!(v));
+    }
+    if let Ok(v) = doc.get_str("step_id") {
+        obj.insert("step_id".to_string(), json!(v));
+    }
+    if let Ok(v) = doc.get_str("message") {
+        obj.insert("message".to_string(), json!(v));
+    }
+    if let Ok(d) = doc.get_document("data") {
+        if let Ok(data) = bson::from_document::<Value>(d.clone()) {
+            obj.insert("data".to_string(), data);
+        }
+    }
+    if let Ok(dt) = doc.get_datetime("timestamp") {
+        obj.insert("timestamp".to_string(), json!(dt.to_chrono().to_rfc3339()));
+    }
+
+    Value::Object(obj)
+}
+
 /// SSE streaming endpoint for execution events
 /// Supports auth via query token since EventSource doesn't support headers
 async fn stream_execution(
@@ -150,12 +225,23 @@ async fn stream_execution(
     // Validate JWT
     let claims = crate::auth::jwt::decode_token(token, &state.config.jwt_secret_key)?;
 
+    // Resolve username → user ObjectId (same as AuthUser middleware)
+    let db = state.mongo_client.database(DB_NAME);
+    let users_collection = db.collection::<bson::Document>(USERS);
+    let user_doc = users_collection
+        .find_one(doc! { "username": &claims.sub })
+        .await?
+        .ok_or_else(|| AppError::Unauthorized("User not found".to_string()))?;
+    let user_id = user_doc
+        .get_object_id("_id")
+        .map(|id| id.to_hex())
+        .map_err(|_| AppError::Internal("Invalid user ID".to_string()))?;
+
     // Verify execution exists and belongs to user
     let oid = ObjectId::parse_str(&execution_id)?;
-    let db = state.mongo_client.database(DB_NAME);
     let exec_collection = db.collection::<bson::Document>(FLOW_EXECUTIONS);
     let _exec = exec_collection
-        .find_one(doc! { "_id": oid, "user_id": &claims.sub })
+        .find_one(doc! { "_id": oid, "user_id": &user_id })
         .await?
         .ok_or_else(|| AppError::NotFound("Execution not found".to_string()))?;
 

@@ -175,10 +175,26 @@ impl AgentApiClient {
         // Build messages
         let mut messages = conversation_history.unwrap_or_default();
 
-        // System prompt
+        // System prompt — enrich with available tools info
         let system_prompt = agent_data.get_str("system_prompt").unwrap_or("").to_string();
-        if !system_prompt.is_empty() {
-            messages.insert(0, LLMMessage::system(&system_prompt));
+        let enriched_prompt = if available_tools.is_empty() {
+            system_prompt.clone()
+        } else {
+            let tool_list: Vec<String> = available_tools.iter().map(|t| {
+                if t.description.is_empty() {
+                    format!("- {}", t.name)
+                } else {
+                    format!("- {}: {}", t.name, t.description)
+                }
+            }).collect();
+            format!(
+                "{}\n\n## Available Tools\nYou have access to the following tools:\n{}\n\n## IMPORTANT INSTRUCTIONS\n- When the task involves creating, writing, or generating code/files, you MUST use the appropriate tools (write_file, create_directory, etc.) to save them to disk.\n- Do NOT just output code as text. Actually create the files using your tools.\n- When the task says \"write\", \"create\", \"generate\", or \"develop\" code, always save it to files on disk.\n- Use list_allowed_directories first to know where you can write files.",
+                system_prompt,
+                tool_list.join("\n")
+            )
+        };
+        if !enriched_prompt.is_empty() {
+            messages.insert(0, LLMMessage::system(&enriched_prompt));
         }
 
         // User message
@@ -194,10 +210,14 @@ impl AgentApiClient {
         let max_tokens = config.get_i64("max_tokens").unwrap_or(4000);
         let temperature = config.get_f64("temperature").unwrap_or(0.7);
 
-        // Decrypt API key
-        let api_key = llm_data.get_str("api_key").ok()
+        // Decrypt API key (field is "api_key_encrypted" in MongoDB)
+        let api_key = match llm_data.get_str("api_key_encrypted").ok()
+            .or_else(|| llm_data.get_str("api_key").ok())
             .and_then(|encrypted| decrypt_api_key(&self.cipher, encrypted).ok())
-            .unwrap_or_default();
+        {
+            Some(key) if !key.is_empty() => key,
+            _ => return json!({"success": false, "error": "Failed to decrypt API key — check that the LLM has a valid API key"}),
+        };
 
         // Format tools for provider
         let provider = match provider_str {

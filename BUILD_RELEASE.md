@@ -403,7 +403,64 @@ Si se distribuye para ambas plataformas, el `latest.json` incluye ambas:
 
 ## Parte 3: Modo desarrollo
 
-### Dev con servicios embebidos (completo)
+### Requisitos para desarrollo
+
+| Componente | Descripcion |
+|------------|-------------|
+| **MongoDB** | `mongod` instalado en el sistema (no el sidecar). Descargar de [mongodb.com](https://www.mongodb.com/try/download/community) como zip y agregar al PATH |
+| **Rust** | `cargo` para compilar el backend en modo debug |
+| **Node.js** | `npm` para el frontend y Tauri CLI |
+
+### Licencia en desarrollo
+
+La validacion de licencia (Supabase) se **desactiva automaticamente** en desarrollo. Si las variables de entorno `SUPABASE_URL` y `SUPABASE_KEY` no estan configuradas, el backend siempre responde `{ "active": true }` en el endpoint `/auth/license-status`. Esto significa:
+
+- No necesitas cuenta de Supabase para desarrollar
+- El `LicenseGuard` del frontend nunca bloquea la app
+- Al iniciar el backend veras el log: `WARN: Supabase not configured - license validation disabled`
+
+Para probar la validacion de licencia en desarrollo, exporta las variables antes de ejecutar el backend:
+```bash
+SUPABASE_URL=https://tu-proyecto.supabase.co SUPABASE_KEY=tu-key PORT=8000 DB_URI_MONGO=mongodb://localhost:27017/hypernova_pods cargo run
+```
+
+### Opcion A: Dev con servicios externos (recomendado)
+
+La forma mas rapida de iterar. Se levantan 3 procesos en terminales separadas. El backend se compila en modo `debug` (mas rapido que `--release`), y los cambios en el frontend tienen hot reload.
+
+**Terminal 1 — MongoDB:**
+```bash
+# Crear directorio de datos si no existe
+mkdir -p data/db
+
+# Iniciar MongoDB en puerto 27017
+mongod --dbpath ./data/db --port 27017
+```
+> Usa el `mongod` instalado en el sistema (no el sidecar de `src-tauri/binaries/`). El directorio `data/db` se crea en la raiz del proyecto.
+
+**Terminal 2 — Backend Rust (modo debug):**
+```bash
+cd pods/rust-backend
+PORT=8000 DB_URI_MONGO=mongodb://localhost:27017/hypernova_pods cargo run
+```
+> Compila en modo debug (mas rapido, ~2 min la primera vez, luego incremental ~10-30s). El backend queda escuchando en `http://localhost:8000`. Si cambias codigo Rust, mata el proceso (Ctrl+C) y ejecuta de nuevo.
+
+**Terminal 3 — Tauri + Frontend (sin sidecars):**
+```bash
+cd pods/web-ui
+npm run tauri:dev:external
+# Equivale a: SKIP_EMBEDDED_SERVICES=true tauri dev
+```
+> Tauri no levanta MongoDB ni Backend como sidecars. Se conecta a los servicios externos en los puertos default (27017/8000). El frontend tiene hot reload via Vite.
+
+**Como funciona internamente:**
+1. `SKIP_EMBEDDED_SERVICES=true` hace que `lib.rs` no inicie los sidecars de mongod/pods-backend
+2. Los managers (`DatabaseManager`, `BackendManager`) se configuran con los puertos 27017 y 8000 respectivamente
+3. El health check (`check_services_health`) verifica via TCP que MongoDB y Backend estan escuchando en esos puertos
+4. `initializeApiBaseUrl()` obtiene el puerto del backend via `invoke('get_backend_port')` → retorna 8000
+5. El frontend se conecta a `http://localhost:8000` para todas las llamadas API
+
+### Opcion B: Dev con servicios embebidos (completo)
 
 ```bash
 cd pods/web-ui
@@ -411,38 +468,30 @@ npm install
 npm run tauri:dev
 ```
 
-Tauri levanta MongoDB + Backend con puertos dinamicos automaticamente.
+Tauri levanta MongoDB + Backend automaticamente con puertos dinamicos. Mas lento porque compila los sidecars desde `src-tauri/binaries/`. Util para probar el flujo completo como lo veria un usuario final.
 
-### Dev con servicios externos (mas rapido)
+### Opcion C: Dev solo frontend (sin Tauri)
 
-Levantar MongoDB y Backend por separado, sin recompilar sidecars cada vez:
+Si solo necesitas iterar en la UI sin la ventana nativa de Tauri:
 
-Terminal 1 — MongoDB:
-```bash
-mongod --dbpath ./data/db --port 27017
-```
-
-Terminal 2 — Backend:
-```bash
-cd pods/rust-backend
-PORT=8000 DB_URI_MONGO=mongodb://localhost:27017/hypernova_pods cargo run
-```
-
-Terminal 3 — Tauri (sin sidecars embebidos):
-```bash
-cd pods/web-ui
-npm run tauri:dev:external
-# Equivale a: SKIP_EMBEDDED_SERVICES=true tauri dev
-```
-
-### Dev solo frontend (sin Tauri)
-
+Levanta MongoDB y Backend igual que en Opcion A (terminales 1 y 2), y luego:
 ```bash
 cd pods/web-ui
 npm run dev
 # Abre http://localhost:5173
 # Usa los valores de .env (VITE_MCP_SERVER_URL=http://localhost:8000)
 ```
+> No hay ventana Tauri, solo el navegador. Los comandos `invoke()` de Tauri (como `get_backend_port`) fallan silenciosamente y se usan los valores default del `.env`.
+
+### Troubleshooting modo desarrollo
+
+| Problema | Solucion |
+|----------|----------|
+| "Port 5173 is already in use" | Matar el proceso anterior: `netstat -ano \| grep 5173` → `taskkill /PID <pid> /F` |
+| StartupLoader se queda en "Esperando MongoDB/Backend" | Verificar que `mongod` esta corriendo en 27017 y backend en 8000. Si usas `tauri:dev:external`, los managers deben tener los puertos correctos (fix en v1.0.7+) |
+| Backend no arranca con `cargo run` | Verificar que MongoDB esta corriendo primero. El backend necesita conectarse al iniciar |
+| Cambios en Rust no se reflejan | `cargo run` en modo debug no tiene hot reload. Mata el proceso y ejecuta de nuevo |
+| Cambios en frontend no se reflejan | Vite tiene hot reload automatico. Si no funciona, revisa la consola del navegador |
 
 ---
 

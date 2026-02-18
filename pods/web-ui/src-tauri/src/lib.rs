@@ -667,9 +667,14 @@ pub fn run() {
           }
         });
 
+        let mut db_mgr = DatabaseManager::new(&app.handle())?;
+        db_mgr.set_port(27017);
+        let mut backend_mgr = BackendManager::new();
+        backend_mgr.set_port(8000);
+
         app.manage(AppState {
-          database_manager: Mutex::new(DatabaseManager::new(&app.handle())?),
-          backend_manager: Mutex::new(BackendManager::new()),
+          database_manager: Mutex::new(db_mgr),
+          backend_manager: Mutex::new(backend_mgr),
           system_dependencies: Mutex::new(system_deps),
           backend_port: 8000,
           mongo_port: 27017,

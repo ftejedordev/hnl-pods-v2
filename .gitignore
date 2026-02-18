@@ -48,3 +48,10 @@ logs/
 
 # Tauri signing keys
 *.key
+
+# Local MongoDB data
+data/
+
+# Node artifacts in rust-backend (test server)
+/pods/rust-backend/backend/
+/pods/rust-backend/package-lock.json

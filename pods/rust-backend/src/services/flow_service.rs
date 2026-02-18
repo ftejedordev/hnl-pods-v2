@@ -85,7 +85,13 @@ impl FlowService {
         };
 
         let flow_doc = flow_doc.ok_or_else(|| AppError::NotFound("Flow not found".to_string()))?;
-        let flow: Flow = bson::from_document(flow_doc)
+
+        // Remove date fields before deserializing — bson::DateTime can't map to chrono directly
+        let mut flow_doc_clean = flow_doc.clone();
+        flow_doc_clean.remove("created_at");
+        flow_doc_clean.remove("updated_at");
+
+        let flow: Flow = bson::from_document(flow_doc_clean)
             .map_err(|e| AppError::Internal(format!("Failed to deserialize flow: {}", e)))?;
 
         // Create execution record
@@ -415,7 +421,9 @@ impl FlowExecutor {
             .ok_or("LLM step requires agent_id")?;
 
         let task = resolve_variables(
-            step.parameters.get("task").and_then(|v| v.as_str()).unwrap_or(&step.name),
+            step.parameters.get("task").and_then(|v| v.as_str())
+                .or(step.description.as_deref())
+                .unwrap_or(&step.name),
             variables,
         );
 
@@ -424,6 +432,7 @@ impl FlowExecutor {
         let event_exec_id = execution_id.to_string();
         let event_step_id = step.id.clone();
         let channels = Arc::clone(&self.event_channels);
+        let db_client = self.service.mongo_client.clone();
 
         let mut client = AgentApiClient::new(
             self.service.mongo_client.clone(),
@@ -451,10 +460,21 @@ impl FlowExecutor {
                 },
                 timestamp: Utc::now(),
             };
-            // Fire-and-forget broadcast (can't await in sync closure)
+            // Fire-and-forget: broadcast AND store in DB (except streaming chunks)
             let channels_clone = channels.clone();
+            let db_clone = db_client.clone();
             let event_clone = event.clone();
+            let should_store = event_type != "LLM_STREAMING_CHUNK";
             tokio::spawn(async move {
+                // Store in DB for polling (skip streaming chunks — too many)
+                if should_store {
+                    let collection = db_clone.database(crate::db::collections::DB_NAME)
+                        .collection::<bson::Document>(crate::db::collections::FLOW_EVENTS);
+                    if let Ok(doc) = bson::to_document(&event_clone) {
+                        let _ = collection.insert_one(doc).await;
+                    }
+                }
+                // Broadcast to SSE subscribers
                 let chans = channels_clone.read().await;
                 if let Some(sender) = chans.get(&event_clone.execution_id) {
                     let _ = sender.send(event_clone);

@@ -90,87 +90,96 @@ export const executionsApi = {
     return response.data;
   },
 
-  // Subscribe to execution events via SSE with automatic reconnection
+  // Subscribe to execution events via HTTP polling (reliable in Tauri webview)
   subscribeToExecutionEvents: (executionId: string, onEvent: (event: any) => void, onError?: (error: Error) => void): SSEConnection => {
-    let eventSource: EventSource | null = null;
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 5;
-    let reconnectTimer: NodeJS.Timeout | null = null;
-    let isManualClose = false;
-    
-    const connect = () => {
-      // Get auth token for SSE connection (EventSource doesn't support headers)
-      const token = localStorage.getItem('auth-token');
-      const url = `${mcp_api.defaults.baseURL}/api/executions/${executionId}/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-      
-      console.log(`🔗 Attempting SSE connection (attempt ${reconnectAttempts + 1})`);
-      eventSource = new EventSource(url);
+    let isClosed = false;
+    let readyState = EventSource.CONNECTING;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let eventsSeen = 0;
+    let consecutiveErrors = 0;
 
-      eventSource.onopen = () => {
-        console.log(`✅ SSE connection established`);
-        reconnectAttempts = 0; // Reset counter on successful connection
-      };
+    const startPolling = () => {
+      readyState = EventSource.OPEN;
 
-      eventSource.onmessage = (event) => {
+      // Emit synthetic connection_established event
+      onEvent({
+        event_type: 'connection_established',
+        execution_id: executionId,
+        message: 'Connected to execution stream (polling)',
+      });
+
+      console.log(`[Polling] Started for execution ${executionId}`);
+
+      // Poll immediately, then every 1.5 seconds
+      const poll = async () => {
+        if (isClosed) return;
+
         try {
-          const data = JSON.parse(event.data);
-          onEvent(data);
-        } catch (error) {
-          onError?.(error as Error);
+          const resp = await mcp_api.get(`/api/executions/${executionId}/events?after=${eventsSeen}`);
+          const newEvents: any[] = resp.data;
+          consecutiveErrors = 0;
+
+          for (const event of newEvents) {
+            eventsSeen++;
+            onEvent(event);
+
+            // Check for terminal events
+            const terminalTypes = ['execution_completed', 'execution_failed', 'execution_cancelled'];
+            if (terminalTypes.includes(event.event_type)) {
+              console.log(`[Polling] Terminal event received: ${event.event_type}`);
+              isClosed = true;
+              if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+              }
+              readyState = EventSource.CLOSED;
+              return;
+            }
+          }
+        } catch (err: any) {
+          consecutiveErrors++;
+          console.warn(`[Polling] Error (attempt ${consecutiveErrors}):`, err?.message);
+
+          if (consecutiveErrors >= 10) {
+            console.error(`[Polling] Too many errors, stopping`);
+            isClosed = true;
+            if (pollTimer) {
+              clearInterval(pollTimer);
+              pollTimer = null;
+            }
+            readyState = EventSource.CLOSED;
+            onError?.(new Error('Polling failed after too many errors'));
+            return;
+          }
         }
       };
 
-      eventSource.onerror = (error) => {
-        console.warn(`⚠️ SSE connection error:`, error);
-        
-        if (!isManualClose && reconnectAttempts < maxReconnectAttempts) {
-          reconnectAttempts++;
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 30000); // Exponential backoff, max 30s
-          
-          console.log(`🔄 Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
-          
-          reconnectTimer = setTimeout(() => {
-            if (eventSource) {
-              eventSource.close();
-            }
-            connect();
-          }, delay);
-        } else if (!isManualClose) {
-          console.error(`❌ SSE connection failed after ${maxReconnectAttempts} attempts`);
-          onError?.(new Error(`SSE connection failed after ${maxReconnectAttempts} attempts`));
-        }
-      };
+      // First poll immediately
+      poll();
+      // Then poll every 1.5 seconds
+      pollTimer = setInterval(poll, 1500);
     };
 
-    // Start initial connection
-    connect();
+    startPolling();
 
-    // Return a wrapper object that includes close functionality
     const wrapper: SSEConnection = {
       close: () => {
-        isManualClose = true;
-        if (reconnectTimer) {
-          clearTimeout(reconnectTimer);
-          reconnectTimer = null;
+        isClosed = true;
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
         }
-        if (eventSource) {
-          eventSource.close();
-          eventSource = null;
-        }
+        readyState = EventSource.CLOSED;
       },
       stopReconnecting: () => {
-        // Mark as manual close to prevent reconnection attempts
-        isManualClose = true;
-        if (reconnectTimer) {
-          clearTimeout(reconnectTimer);
-          reconnectTimer = null;
+        isClosed = true;
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
         }
       },
-      // For compatibility with existing code that expects EventSource interface
-      addEventListener: (type: string, listener: EventListener) => eventSource?.addEventListener(type, listener),
-      removeEventListener: (type: string, listener: EventListener) => eventSource?.removeEventListener(type, listener),
       get readyState() {
-        return eventSource ? eventSource.readyState : EventSource.CLOSED;
+        return readyState;
       }
     };
 

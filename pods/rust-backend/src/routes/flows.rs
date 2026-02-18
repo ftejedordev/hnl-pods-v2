@@ -181,6 +181,7 @@ async fn execute_flow(
     ).await?;
 
     Ok(Json(json!({
+        "id": execution_id,
         "execution_id": execution_id,
         "flow_id": flow_id,
         "status": "running",
@@ -189,7 +190,20 @@ async fn execute_flow(
 }
 
 fn doc_to_flow_response(doc: &bson::Document) -> Result<FlowResponse, AppError> {
-    let flow: Flow = bson::from_document(doc.clone())
+    // Extract dates manually from bson::DateTime to avoid deserialization issues
+    let created_at = doc.get_datetime("created_at")
+        .map(|d| d.to_chrono())
+        .unwrap_or_else(|_| Utc::now());
+    let updated_at = doc.get_datetime("updated_at")
+        .map(|d| d.to_chrono())
+        .unwrap_or_else(|_| Utc::now());
+
+    // Remove date fields before deserializing the rest
+    let mut doc_without_dates = doc.clone();
+    doc_without_dates.remove("created_at");
+    doc_without_dates.remove("updated_at");
+
+    let flow: Flow = bson::from_document(doc_without_dates)
         .map_err(|e| AppError::Internal(format!("Failed to deserialize flow: {}", e)))?;
 
     Ok(FlowResponse {
@@ -203,7 +217,7 @@ fn doc_to_flow_response(doc: &bson::Document) -> Result<FlowResponse, AppError> 
         metadata: flow.metadata,
         edge_metadata: flow.edge_metadata,
         is_active: flow.is_active,
-        created_at: flow.created_at.unwrap_or_else(Utc::now),
-        updated_at: flow.updated_at.unwrap_or_else(Utc::now),
+        created_at,
+        updated_at,
     })
 }

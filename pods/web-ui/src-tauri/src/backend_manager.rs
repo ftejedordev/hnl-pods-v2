@@ -17,6 +17,10 @@ impl BackendManager {
         }
     }
 
+    pub fn set_port(&mut self, port: u16) {
+        self.port = port;
+    }
+
     pub fn start_backend(&mut self, app_handle: &tauri::AppHandle, system_deps: crate::SystemDependencies, backend_port: u16, mongo_port: u16) -> Result<(), String> {
         self.port = backend_port;
         // Get Chromium path for Playwright - platform-specific

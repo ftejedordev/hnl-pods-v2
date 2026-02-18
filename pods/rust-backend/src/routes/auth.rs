@@ -26,9 +26,11 @@ async fn register(
     let db = state.mongo_client.database(DB_NAME);
     let users = db.collection::<bson::Document>(USERS);
 
+    let username = payload.username.trim().to_string();
+
     // Check if username already exists
     let existing = users
-        .find_one(doc! { "username": &payload.username })
+        .find_one(doc! { "username": &username })
         .await?;
     if existing.is_some() {
         return Err(AppError::BadRequest("Username already registered".to_string()));
@@ -46,7 +48,7 @@ async fn register(
     let now = Utc::now();
 
     let user_doc = doc! {
-        "username": &payload.username,
+        "username": &username,
         "hashed_password": &hashed,
         "created_at": bson::DateTime::from_chrono(now),
         "role": "user",
@@ -62,7 +64,7 @@ async fn register(
     // Sync to Supabase (non-blocking — don't fail registration if Supabase is down)
     if let (Some(url), Some(key)) = (&state.config.supabase_url, &state.config.supabase_key) {
         let license_svc = crate::services::license_service::LicenseService::new(url, key);
-        if let Err(e) = license_svc.register_license(&payload.username).await {
+        if let Err(e) = license_svc.register_license(&username).await {
             tracing::warn!("Failed to sync license to Supabase: {}", e);
         }
     }
@@ -80,9 +82,11 @@ async fn login(
     let db = state.mongo_client.database(DB_NAME);
     let users = db.collection::<bson::Document>(USERS);
 
+    let username = payload.username.trim().to_string();
+
     // Find user
     let user_doc = users
-        .find_one(doc! { "username": &payload.username })
+        .find_one(doc! { "username": &username })
         .await?
         .ok_or_else(|| AppError::Unauthorized("Incorrect username or password".to_string()))?;
 
@@ -101,7 +105,7 @@ async fn login(
     // Check license in Supabase (if configured)
     if let (Some(url), Some(key)) = (&state.config.supabase_url, &state.config.supabase_key) {
         let license_svc = crate::services::license_service::LicenseService::new(url, key);
-        match license_svc.check_license(&payload.username).await {
+        match license_svc.check_license(&username).await {
             Ok(true) => { /* License active — proceed */ }
             Ok(false) => {
                 return Err(AppError::Forbidden(
@@ -117,7 +121,7 @@ async fn login(
 
     // Create JWT
     let token = create_access_token(
-        &payload.username,
+        &username,
         &state.config.jwt_secret_key,
         state.config.jwt_expire_minutes,
     )?;
