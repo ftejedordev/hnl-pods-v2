@@ -54,6 +54,7 @@ async-stream = "0.3"
 
 # MCP SDK (official) - keep default features for macros/builders
 rmcp = { version = "0.15", features = ["client", "transport-child-process", "transport-streamable-http-client-reqwest"] }
+dirs = "6.0.0"
 
 [profile.release]
 opt-level = 3
