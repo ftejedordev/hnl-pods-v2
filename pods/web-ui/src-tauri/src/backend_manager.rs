@@ -191,5 +191,7 @@ impl BackendManager {
 impl Drop for BackendManager {
     fn drop(&mut self) {
         self.shutdown();
+        // Safety net: ensure runtime file is removed on abnormal exit
+        crate::runtime_file::remove_runtime_file();
     }
 }

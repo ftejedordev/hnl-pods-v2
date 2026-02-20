@@ -96,7 +96,11 @@ func buildConfigContent(cfg *config.Config) string {
 
 	// API Settings
 	content.WriteString("🌐 API Settings\n")
-	content.WriteString(fmt.Sprintf("  Endpoint: %s\n", cfg.APIEndpoint))
+	if cfg.RuntimeEndpoint != "" && cfg.APIEndpoint == cfg.RuntimeEndpoint {
+		content.WriteString(fmt.Sprintf("  Endpoint: %s (auto-detected from Tauri)\n", cfg.APIEndpoint))
+	} else {
+		content.WriteString(fmt.Sprintf("  Endpoint: %s\n", cfg.APIEndpoint))
+	}
 
 	// Show token status (masked)
 	tokenStatus := "not set"
@@ -167,9 +171,13 @@ func showConfig(cfg *config.Config) error {
 
 	// API Settings
 	fmt.Printf("%s\n", keyStyle.Render("🌐 API Settings"))
+	endpointDisplay := cfg.APIEndpoint
+	if cfg.RuntimeEndpoint != "" && cfg.APIEndpoint == cfg.RuntimeEndpoint {
+		endpointDisplay = cfg.APIEndpoint + " (auto-detected from Tauri)"
+	}
 	fmt.Printf("  %s %s\n",
 		keyStyle.Render("Endpoint:"),
-		valueStyle.Render(cfg.APIEndpoint))
+		valueStyle.Render(endpointDisplay))
 
 	// Show token status (masked)
 	tokenStatus := "not set"

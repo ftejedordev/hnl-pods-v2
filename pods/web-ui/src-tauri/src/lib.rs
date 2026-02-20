@@ -1,5 +1,6 @@
 mod database_manager;
 mod backend_manager;
+mod runtime_file;
 
 use database_manager::DatabaseManager;
 use backend_manager::BackendManager;
@@ -502,6 +503,9 @@ fn get_backend_port(state: tauri::State<AppState>) -> u16 {
 fn shutdown_services(state: tauri::State<AppState>) -> Result<(), String> {
     log::info!("🔄 Shutdown requested for update - stopping services...");
 
+    // Remove runtime file so CLI stops using this backend's port
+    runtime_file::remove_runtime_file();
+
     if let Ok(mut backend) = state.backend_manager.lock() {
         log::info!("🔌 Stopping backend...");
         backend.shutdown();
@@ -575,6 +579,9 @@ pub fn run() {
             "quit" => {
               // Cleanup completo antes de cerrar
               log::info!("🛑 Quit solicitado desde tray - iniciando cleanup...");
+
+              // Remove runtime file so CLI stops using this backend's port
+              runtime_file::remove_runtime_file();
 
               // Obtener state para acceder a los managers
               if let Some(state) = app.try_state::<AppState>() {
@@ -679,6 +686,11 @@ pub fn run() {
           backend_port: 8000,
           mongo_port: 27017,
         });
+
+        // Write runtime file so CLI can discover the dev backend port
+        if let Err(e) = runtime_file::write_runtime_file(8000) {
+          log::warn!("Failed to write runtime file in dev mode: {}", e);
+        }
       } else {
         // Pre-allocate ports on the main thread (instant, no blocking)
         let mongo_port = find_free_port()
@@ -704,6 +716,9 @@ pub fn run() {
         let app_handle = app.handle().clone();
         std::thread::spawn(move || {
           log::info!("Starting embedded database and backend services (background)...");
+
+          // Remove any stale runtime file from a previous crashed session
+          runtime_file::remove_runtime_file();
 
           // 🧹 CLEANUP: Matar procesos huérfanos por NOMBRE (no por puerto)
           log::info!("🧹 Limpiando procesos huérfanos antes de iniciar servicios...");
@@ -759,6 +774,11 @@ pub fn run() {
                   log::error!("❌ Failed to start backend: {}", e);
                   return;
                 }
+              }
+
+              // Write runtime file so CLI can discover the backend port
+              if let Err(e) = runtime_file::write_runtime_file(backend_port) {
+                log::warn!("Failed to write runtime file: {}", e);
               }
 
               log::info!("All embedded services started successfully");

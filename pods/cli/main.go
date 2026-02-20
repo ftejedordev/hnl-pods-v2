@@ -58,11 +58,9 @@ Examples:
   pod config set api http://localhost:8000`,
 		Version: version,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// Set up logging based on verbosity
-			if cfg.Verbose {
-				// Debug level logging removed
-			} else {
-				// Info level logging removed
+			// Endpoint priority: --api flag > runtime file > config file
+			if !cmd.Flags().Changed("api") && cfg.RuntimeEndpoint != "" {
+				cfg.APIEndpoint = cfg.RuntimeEndpoint
 			}
 		},
 	}

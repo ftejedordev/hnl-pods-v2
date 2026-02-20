@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,8 +18,9 @@ type Config struct {
 	ColorScheme    map[string]string `json:"color_scheme"`
 
 	// Runtime flags (not persisted)
-	JSONOutput bool `json:"-"`
-	NoColor    bool `json:"-"`
+	JSONOutput      bool   `json:"-"`
+	NoColor         bool   `json:"-"`
+	RuntimeEndpoint string `json:"-"` // Discovered from Tauri's runtime.json
 }
 
 // DefaultConfig returns the default configuration
@@ -92,6 +94,11 @@ func Load() (*Config, error) {
 	}
 	if cfg.ColorScheme == nil {
 		cfg.ColorScheme = defaults.ColorScheme
+	}
+
+	// Attempt to discover Tauri's runtime backend port
+	if ri, err := LoadRuntimeInfo(); err == nil && ri != nil {
+		cfg.RuntimeEndpoint = fmt.Sprintf("http://localhost:%d", ri.BackendPort)
 	}
 
 	return &cfg, nil
