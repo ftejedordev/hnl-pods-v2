@@ -60,3 +60,4 @@ CLAUDE.md
 pods/web-ui/src-tauri/binaries/pods-backend-x86_64-unknown-linux-gnu
 pods/web-ui/src-tauri/binaries/pod-x86_64-unknown-linux-gnu
 pods/web-ui/src-tauri/binaries/pod
+BUILD_LINUX.md
